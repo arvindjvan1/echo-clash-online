@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Echo Clash Online V0.4.1</title>
+<style>
+:root{--bg:#0b0d12;--panel:#151922;--panel2:#202532;--line:#333a4d;--txt:#f4f5f8;--muted:#9ea6b8;--accent:#9b7bff;--good:#62d8a6;--bad:#ff7485;--warn:#ffc96b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}button,input,select{font:inherit}button{border:0;border-radius:10px;padding:10px 14px;background:var(--accent);color:white;font-weight:800;cursor:pointer}button.secondary{background:#2a3040}button.ghost{background:transparent;border:1px solid var(--line)}button:disabled{opacity:.45;cursor:not-allowed}input,select{width:100%;padding:10px;background:#202532;color:white;border:1px solid var(--line);border-radius:9px}header{height:62px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-bottom:1px solid var(--line);background:#0c0e14d9;backdrop-filter:blur(12px);position:sticky;top:0;z-index:20}.brand{font-weight:900}.sub{font-size:11px;color:var(--muted)}main{max-width:1500px;margin:auto;padding:14px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px}.landing{max-width:820px;margin:24px auto}.tabs{display:flex;gap:8px;margin-bottom:12px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}label{display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--muted)}.hidden{display:none!important}.lobbyHead{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}.seats{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px;margin-top:12px}.seat,.pod{background:#1c202b;border:1px solid #363d50;border-radius:12px;padding:10px}.seat.host,.pod.active{outline:2px solid var(--accent)}.row{display:flex;align-items:center;justify-content:space-between;gap:8px}.badge{font-size:10px;background:#2a3040;padding:4px 7px;border-radius:999px;color:var(--muted)}.game{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:12px}.turnbar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:9px}.turn{font-size:10px;border:1px solid var(--line);background:#1b1f2a;border-radius:999px;padding:5px 8px;color:var(--muted)}.turn.on{background:#332a50;color:white;border-color:#6c59aa}.board{min-height:500px;background:radial-gradient(circle at center,#1d2230,#11141c 62%,#0e1016);border:1px solid var(--line);border-radius:18px;padding:12px}.opponents{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px}.pod{cursor:pointer}.pod.target{outline:2px solid var(--accent)}.pod.dead{opacity:.38}.hp{height:7px;background:#2c3140;border-radius:999px;overflow:hidden;margin:7px 0}.hp i{display:block;height:100%;background:linear-gradient(90deg,#62d8a6,#9b7bff)}.minis{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}.mini{background:#232837;border-radius:7px;padding:5px;font-size:9px;color:var(--muted)}.mini b{display:block;color:white;font-size:11px}.arena{max-width:720px;margin:24px auto;min-height:220px;border:1px dashed #3a4154;border-radius:18px;display:grid;place-items:center;text-align:center;padding:18px}.arena strong{font-size:18px}.self{display:grid;grid-template-columns:1.2fr .8fr .8fr;gap:8px}.slot{background:#1a1e28;border:1px solid var(--line);border-radius:12px;padding:10px}.handzone{margin-top:10px}.hand{display:flex;gap:8px;overflow-x:auto;padding:12px 2px}.card{flex:0 0 145px;min-height:155px;background:linear-gradient(180deg,#252b3b,#191d28);border:1px solid #3c445a;border-radius:12px;padding:10px;position:relative;cursor:pointer}.card.sel{transform:translateY(-6px);outline:2px solid var(--accent)}.card .kind{font-size:9px;text-transform:uppercase;color:var(--muted)}.card h4{font-size:13px;margin:9px 0 5px}.card p{font-size:10px;color:#c4c9d7;line-height:1.35}.actions{display:flex;gap:7px;flex-wrap:wrap;align-items:center}.side{display:flex;flex-direction:column;gap:10px}.log{background:#0f1218;border-radius:9px;padding:8px;max-height:300px;overflow:auto;font-size:10px;line-height:1.55;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}.pending{border-color:#6957a4}.choice{display:flex;gap:7px;flex-wrap:wrap}.notice{background:#211d31;border:1px solid #44385f;padding:9px 10px;border-radius:10px;font-size:11px;color:#ddd3ff;margin-bottom:9px}.error{position:fixed;right:16px;bottom:16px;background:#511f2a;color:white;border:1px solid #813346;border-radius:10px;padding:11px 13px;z-index:99;max-width:350px}.offlineNote{background:#2b2215;border:1px solid #6a5128;padding:10px;border-radius:10px;color:#ffd99d;margin:10px 0;font-size:11px}
+@media(max-width:980px){.game{grid-template-columns:1fr}.side{display:grid;grid-template-columns:1fr 1fr}.side .panel:last-child{grid-column:1/-1}}
+@media(max-width:680px){.grid2,.self{grid-template-columns:1fr}.opponents{display:flex;overflow-x:auto}.pod{flex:0 0 190px}.side{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <div><div class="brand">⚔ Echo Clash Online</div><div class="sub">V0.4.1 Alpha • multiplayer area rules</div></div>
+  <button id="leave" class="ghost hidden">Leave</button>
+</header>
+<main>
+<section id="landing" class="landing panel">
+  <div class="tabs"><button id="tabCreate">Create Room</button><button id="tabJoin" class="secondary">Join Room</button></div>
+
+  <div id="offlineNote" class="offlineNote hidden">
+    Setup controls work in this preview, but Create/Join needs the Node server. Run <b>npm install</b> then <b>npm start</b>, or deploy the project.
+  </div>
+
+  <div id="createPane">
+    <div class="grid2">
+      <label>Your Name<input id="createName" value="Arvind"/></label>
+      <label>Total Seats
+        <select id="totalSeats">
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4" selected>4</option>
+          <option value="5">5</option>
+          <option value="6">6</option>
+          <option value="7">7</option>
+          <option value="8">8</option>
+        </select>
+      </label>
+      <label>AI Seats
+        <select id="aiSeats">
+          <option value="0">0</option>
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3" selected>3</option>
+        </select>
+      </label>
+      <label>Dice Mode
+        <select id="diceMode">
+          <option value="virtual">Virtual d4</option>
+          <option value="physical">Physical d4</option>
+        </select>
+      </label>
+      <label>Disconnect Rule
+        <select id="disconnectMode">
+          <option value="autopass">Auto-pass disconnected turns</option>
+          <option value="grace">5-minute reconnect grace</option>
+        </select>
+      </label>
+    </div>
+
+    <p class="sub">Deck count scales automatically: 2–3 players = 1 deck, 4–6 = 2 decks, 7–8 = 3 decks.</p>
+    <div id="seatPreview" class="sub" style="margin:10px 0"></div>
+    <button id="createBtn">Create Room</button>
+  </div>
+
+  <div id="joinPane" class="hidden">
+    <div class="grid2">
+      <label>Your Name<input id="joinName"/></label>
+      <label>Room Code<input id="joinCode" maxlength="6"/></label>
+    </div>
+    <button id="joinBtn" style="margin-top:10px">Join Room</button>
+  </div>
+</section>
+
+<section id="lobby" class="panel hidden">
+  <div class="lobbyHead">
+    <div><h2 style="margin:0">Room <span id="roomCode"></span></h2><div class="sub" id="lobbyMeta"></div></div>
+    <div class="actions">
+      <button id="copyLink" class="secondary">Copy Invite Link</button>
+      <button id="readyBtn" class="secondary">Ready</button>
+      <button id="startBtn">Start Match</button>
+    </div>
+  </div>
+  <div id="seats" class="seats"></div>
+</section>
+
+<section id="game" class="hidden">
+  <div id="notice" class="notice"></div>
+  <div id="turnbar" class="turnbar"></div>
+
+  <div class="game">
+    <div>
+      <div class="board">
+        <div id="opponents" class="opponents"></div>
+        <div id="arena" class="arena">
+          <div><strong>Shared Battlefield</strong><div class="sub">Primary Counter → area side lanes → defenses → Monster follow-up</div></div>
+        </div>
+
+        <div class="self">
+          <div class="slot"><b>Your Field</b><div id="selfStats" class="sub" style="margin-top:8px"></div></div>
+          <div class="slot"><b>🐉 Monster</b><div id="selfMonster" class="sub" style="margin-top:8px">Empty</div></div>
+          <div class="slot"><b>🛡 Barrier</b><div id="selfBarrier" class="sub" style="margin-top:8px">Empty</div></div>
+        </div>
+      </div>
+
+      <div class="panel handzone">
+        <div class="row"><b>Your Hand</b><span id="handCount" class="sub"></span></div>
+        <div id="hand" class="hand"></div>
+        <div class="actions">
+          <button id="playBtn">Play / Attack</button>
+          <button id="drawBtn" class="secondary">Draw +3</button>
+          <button id="tradeBtn" class="secondary">Trade Selected</button>
+          <button id="passBtn" class="secondary">Pass</button>
+          <span class="sub">Primary Target: <b id="targetName">None</b></span>
+        </div>
+      </div>
+    </div>
+
+    <aside class="side">
+      <div id="pendingPanel" class="panel pending hidden">
+        <h3 style="margin-top:0">Resolution</h3>
+        <div id="pendingText" class="sub"></div>
+        <div id="pendingControls" class="choice" style="margin-top:10px"></div>
+      </div>
+
+      <div class="panel"><h3 style="margin-top:0">Match</h3><div id="matchInfo" class="sub"></div></div>
+      <div class="panel"><h3 style="margin-top:0">Battle Log</h3><div id="log" class="log"></div></div>
+    </aside>
+  </div>
+</section>
+</main>
+
+<div id="error" class="error hidden"></div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+
+// Important: initialize the setup UI even if Socket.IO is unavailable.
+// This is what fixes Total Seats / AI Seats in the standalone preview.
+const socket = (typeof io==='function') ? io() : null;
+
+let state=null, room=null, token=null, meId=null, selected=[], targetId=null, ready=false;
+
+const cardMeta=n=>{
+  if(['Fire','Water','Earth','Air','Ice','Lightning','Acid'].includes(n))return['Essence','Raw Essence'];
+  if(['Projectile','Wave','Blade','Burst','Bind','Coat'].includes(n))return['Form','Raw Form'];
+  if(['Compression','Acceleration','Amplifier','Explosion'].includes(n))return['Force','Raw Force'];
+  if(n.includes('Barrier'))return['Barrier','Defense'];
+  if(['Ashfang','Stoneback','Stormclaw','Rotcrawler','Emberhide','Shardling'].includes(n))return['Monster','Summon'];
+  if(['Heal','Stability Boost','Output Boost','Cleanse','Monster Heal','Stabilize'].includes(n))return['Support','Support'];
+  return['Configured','Configured attack'];
+};
+
+function error(message){
+  $('error').textContent=message;
+  $('error').classList.remove('hidden');
+  setTimeout(()=>$('error').classList.add('hidden'),3200);
+}
+
+function show(which){
+  ['landing','lobby','game'].forEach(id=>$(id).classList.toggle('hidden',id!==which));
+  $('leave').classList.toggle('hidden',which==='landing');
+}
+
+function saveSession(){
+  if(room&&token) localStorage.setItem('echo_clash_session',JSON.stringify({room,token,meId}));
+}
+function me(){ return state?.players.find(p=>p.id===meId); }
+function isMyTurn(){
+  return state?.status==='playing' &&
+    state.turnPlayerId===meId &&
+    state.phase==='action' &&
+    !state.pending &&
+    me()?.alive;
+}
+
+function refreshAIOptions(){
+  const total=Number($('totalSeats').value);
+  const previous=Number($('aiSeats').value)||0;
+  $('aiSeats').innerHTML='';
+
+  for(let i=0;i<total;i++){
+    const o=document.createElement('option');
+    o.value=String(i);
+    o.textContent=String(i);
+    $('aiSeats').appendChild(o);
+  }
+
+  $('aiSeats').value=String(Math.min(previous,total-1));
+  renderSeatPreview();
+}
+
+function renderSeatPreview(){
+  const total=Number($('totalSeats').value);
+  const ai=Number($('aiSeats').value);
+  const seats=['P1 You'];
+  for(let i=1;i<total;i++) seats.push(i<=ai?`P${i+1} AI ${i}`:`P${i+1} Human`);
+  $('seatPreview').textContent='Seats: '+seats.join(' • ');
+}
+
+$('totalSeats').addEventListener('change',refreshAIOptions);
+$('aiSeats').addEventListener('change',renderSeatPreview);
+refreshAIOptions();
+
+if(!socket){
+  $('offlineNote').classList.remove('hidden');
+}
+
+$('tabCreate').onclick=()=>{
+  $('createPane').classList.remove('hidden');
+  $('joinPane').classList.add('hidden');
+};
+$('tabJoin').onclick=()=>{
+  $('joinPane').classList.remove('hidden');
+  $('createPane').classList.add('hidden');
+};
+
+$('createBtn').onclick=()=>{
+  if(!socket) return error('Online server is not connected. Run or deploy the Node project first.');
+
+  socket.emit('create_room',{
+    name:$('createName').value,
+    totalSeats:+$('totalSeats').value,
+    aiSeats:+$('aiSeats').value,
+    diceMode:$('diceMode').value,
+    disconnectMode:$('disconnectMode').value,
+  },res=>{
+    if(!res.ok) return error(res.error);
+    room=res.code;token=res.token;meId=res.playerId;
+    saveSession();
+    history.replaceState({},'',`/?room=${room}`);
+    show('lobby');
+  });
+};
+
+function joinRoom(code,name,storedToken=null){
+  if(!socket) return error('Online server is not connected.');
+
+  socket.emit('join_room',{code,name,token:storedToken},res=>{
+    if(!res.ok) return error(res.error);
+    room=res.code;token=res.token;meId=res.playerId;
+    saveSession();
+    history.replaceState({},'',`/?room=${room}`);
+    show('lobby');
+  });
+}
+
+$('joinBtn').onclick=()=>joinRoom($('joinCode').value,$('joinName').value);
+$('readyBtn').onclick=()=>{
+  if(!socket)return;
+  ready=!ready;
+  socket.emit('ready',{code:room,ready});
+};
+$('startBtn').onclick=()=>socket&&socket.emit('start_game',{code:room});
+$('copyLink').onclick=async()=>{
+  await navigator.clipboard.writeText(`${location.origin}/?room=${room}`);
+  $('copyLink').textContent='Copied';
+  setTimeout(()=>$('copyLink').textContent='Copy Invite Link',1000);
+};
+$('leave').onclick=()=>{
+  localStorage.removeItem('echo_clash_session');
+  location.href='/';
+};
+
+function emitAction(action){
+  if(socket) socket.emit('act',{code:room,action});
+}
+$('drawBtn').onclick=()=>emitAction({type:'draw'});
+$('passBtn').onclick=()=>emitAction({type:'pass'});
+$('tradeBtn').onclick=()=>emitAction({type:'trade',indices:[...selected]});
+$('playBtn').onclick=()=>emitAction({type:'play',indices:[...selected],targetId});
+
+if(socket){
+  socket.on('game_error',x=>error(x.message));
+  socket.on('state',s=>{
+    state=s;room=s.code;selected=[];
+    saveSession();
+    render();
+  });
+}
+
+function render(){
+  if(!state)return;
+  if(state.status==='lobby'){show('lobby');renderLobby();return;}
+  show('game');renderGame();
+}
+
+function renderLobby(){
+  $('roomCode').textContent=state.code;
+  $('lobbyMeta').textContent=
+    `${state.settings.totalSeats} seats • ${state.settings.aiSeats} AI • `+
+    `${state.settings.diceMode} d4 • ${Math.ceil(state.settings.totalSeats/3)} deck(s)`;
+
+  $('seats').innerHTML='';
+  state.players.forEach((p,i)=>{
+    const d=document.createElement('div');
+    d.className='seat'+(p.id===state.hostId?' host':'');
+    d.innerHTML=
+      `<div class="row"><b>P${i+1} • ${p.name}</b>`+
+      `<span class="badge">${p.isAI?'AI':p.connected?'Online':'Offline'}</span></div>`+
+      `<div class="sub" style="margin-top:6px">${p.id===state.hostId?'Host • ':''}${p.ready?'Ready':'Not ready'}</div>`;
+    $('seats').appendChild(d);
+  });
+
+  $('readyBtn').textContent=me()?.ready?'Unready':'Ready';
+  $('startBtn').style.display=state.viewerId===state.hostId?'':'none';
+}
+
+function renderGame(){
+  const mine=me();
+  const current=state.players.find(p=>p.id===state.turnPlayerId);
+
+  $('notice').textContent=
+    state.status==='ended'?'Match finished.':
+    state.pending?`${state.phase}: waiting for ${state.players.find(p=>p.id===state.pending.playerId)?.name||'player'}`:
+    isMyTurn()?'Your scheduled Action.':
+    `${current?.name||'Player'}'s turn.`;
+
+  $('turnbar').innerHTML='';
+  state.players.forEach((p,i)=>{
+    const x=document.createElement('span');
+    x.className='turn'+(p.id===state.turnPlayerId?' on':'');
+    x.textContent=`P${i+1} ${p.name}`;
+    $('turnbar').appendChild(x);
+  });
+
+  $('opponents').innerHTML='';
+  state.players.filter(p=>p.id!==meId).forEach(p=>{
+    const d=document.createElement('div');
+    d.className='pod'+(p.id===targetId?' target':'')+(!p.alive?' dead':'');
+    d.innerHTML=
+      `<div class="row"><b>${p.name}</b><span class="badge">${p.isAI?'AI':p.connected?'Online':'Offline'}</span></div>`+
+      `<div class="hp"><i style="width:${Math.max(0,p.hp/p.maxHp*100)}%"></i></div>`+
+      `<div class="minis"><div class="mini">HP<b>${p.hp}/${p.maxHp}</b></div>`+
+      `<div class="mini">Cards<b>${p.handCount}</b></div>`+
+      `<div class="mini">Strain<b>${p.ruptureStrain}/2</b></div></div>`+
+      `<div class="sub" style="margin-top:6px">🐉 ${p.monster?p.monster.name:'None'} • 🛡 ${p.barrier?p.barrier.name:'None'}</div>`;
+    d.onclick=()=>{if(p.alive){targetId=p.id;renderGame();}};
+    $('opponents').appendChild(d);
+  });
+
+  $('selfStats').innerHTML=
+    `HP <b>${mine.hp}/${mine.maxHp}</b> • Output <b>${mine.effectiveOutput}</b> • Stability <b>${mine.effectiveStability}</b><br>`+
+    `Strikes <b>${mine.strikes}/5</b> • Loss streak <b>${mine.lossStreak}/3</b> • Rupture <b>${mine.ruptureStrain}/2</b>`;
+
+  $('selfMonster').textContent=mine.monster?`${mine.monster.name} • HP ${mine.monster.hp}`:'Empty';
+  $('selfBarrier').textContent=mine.barrier?`${mine.barrier.name} • HP ${mine.barrier.hp}`:'Empty';
+
+  $('hand').innerHTML='';
+  (mine.hand||[]).forEach((name,i)=>{
+    const m=cardMeta(name);
+    const c=document.createElement('div');
+    c.className='card'+(selected.includes(i)?' sel':'');
+    c.innerHTML=`<div class="kind">${m[0]}</div><h4>${name}</h4><div class="sub">${m[1]}</div>`;
+    c.onclick=()=>{
+      const k=selected.indexOf(i);
+      if(k>=0)selected.splice(k,1);else selected.push(i);
+      renderGame();
+    };
+    $('hand').appendChild(c);
+  });
+
+  $('handCount').textContent=`${mine.handCount} cards`;
+  $('targetName').textContent=state.players.find(p=>p.id===targetId)?.name||'None';
+
+  ['playBtn','drawBtn','tradeBtn','passBtn'].forEach(id=>$(id).disabled=!isMyTurn());
+
+  $('arena').innerHTML=state.tieBreaker
+    ?'<div><b>⚔ TIE BREAKER</b><div class="sub">Tied players return at 20 HP.</div></div>'
+    :'<div><b>Shared Battlefield</b><div class="sub">Area: primary target + adjacent seats. Only primary can Counter.</div></div>';
+
+  $('matchInfo').innerHTML=
+    `Room <b>${state.code}</b><br>Round <b>${state.round}</b><br>`+
+    `Dice <b>${state.settings.diceMode}</b><br>Deck <b>${state.deckCount}</b> • Recycle <b>${state.recycleCount}</b>`;
+
+  $('log').innerHTML='';
+  [...state.log].reverse().forEach(x=>{
+    const d=document.createElement('div');
+    d.textContent=x.text;
+    $('log').appendChild(d);
+  });
+
+  renderPending();
+}
+
+function renderPending(){
+  const p=state.pending;
+  const box=$('pendingPanel');
+  const controls=$('pendingControls');
+
+  if(!p){box.classList.add('hidden');return;}
+
+  box.classList.remove('hidden');
+  controls.innerHTML='';
+  $('pendingText').textContent=p.label||p.kind;
+
+  if(p.playerId!==meId)return;
+
+  if(p.kind==='roll'){
+    if(p.diceMode==='virtual'){
+      const b=document.createElement('button');
+      b.textContent='Roll Virtual d4';
+      b.onclick=()=>socket.emit('roll',{code:room});
+      controls.appendChild(b);
+    }else{
+      [1,2,3,4].forEach(n=>{
+        const b=document.createElement('button');
+        b.textContent=n;
+        b.className='secondary';
+        b.onclick=()=>socket.emit('roll',{code:room,roll:n});
+        controls.appendChild(b);
+      });
+    }
+  }
+
+  if(p.kind==='counter'){
+    const note=document.createElement('div');
+    note.className='sub';
+    note.textContent='You are the primary target. Side players never receive a Counter prompt.';
+    controls.appendChild(note);
+
+    const b=document.createElement('button');
+    b.textContent='Counter with Selected';
+    b.onclick=()=>socket.emit('counter',{code:room,indices:[...selected]});
+    controls.appendChild(b);
+
+    const d=document.createElement('button');
+    d.textContent='Decline';
+    d.className='secondary';
+    d.onclick=()=>socket.emit('counter',{code:room,decline:true});
+    controls.appendChild(d);
+  }
+
+  if(p.kind==='state_choice'){
+    [['v','Vitality +50'],['o','Output +1'],['s','Stability +1']].forEach(([pick,label])=>{
+      const b=document.createElement('button');
+      b.textContent=label;
+      b.onclick=()=>socket.emit('state_choice',{code:room,pick});
+      controls.appendChild(b);
+    });
+  }
+
+  if(p.kind==='loss_choice'){
+    const a=document.createElement('button');
+    a.textContent='Return 2 Cards';
+    a.onclick=()=>socket.emit('loss_choice',{code:room,choice:'cards'});
+    controls.appendChild(a);
+
+    const b=document.createElement('button');
+    b.textContent='Sacrifice Vitality';
+    b.className='secondary';
+    b.onclick=()=>socket.emit('loss_choice',{code:room,choice:'vitality'});
+    controls.appendChild(b);
+  }
+}
+
+const qs=new URLSearchParams(location.search);
+const requestedRoom=qs.get('room');
+const saved=JSON.parse(localStorage.getItem('echo_clash_session')||'null');
+
+if(requestedRoom){
+  $('tabJoin').click();
+  $('joinCode').value=requestedRoom.toUpperCase();
+  if(socket&&saved&&saved.room===requestedRoom.toUpperCase()){
+    joinRoom(requestedRoom,'',saved.token);
+  }
+}else if(socket&&saved?.room){
+  joinRoom(saved.room,'',saved.token);
+}
+</script>
+</body>
+</html>
