@@ -36,4 +36,16 @@ assert.strictEqual(decksForPlayers(3),1);
 assert.strictEqual(decksForPlayers(6),2);
 assert.strictEqual(decksForPlayers(8),3);
 assert.strictEqual(CONFIGURED['Echo Shell'].shell,true);
-console.log('Echo Clash V0.4.2 rules audit passed.');
+
+const fs=require('fs');
+const path=require('path');
+const serverSource=fs.readFileSync(path.join(__dirname,'..','server.js'),'utf8');
+const htmlSource=fs.readFileSync(path.join(__dirname,'..','public','index.html'),'utf8');
+assert(serverSource.includes('drawCards(room,p,1)'), 'V0.5 must auto-draw 1 at scheduled turn start');
+for(const id of ['menu','landing','rulebook','tutorial','lobby','game','cardEncyclopedia']){
+  assert(htmlSource.includes(`id="${id}"`), `V0.5 UI missing ${id}`);
+}
+assert(htmlSource.includes('PLAYER_COLORS'), 'V0.5 player color coding missing');
+assert(htmlSource.includes('TUTORIAL_STEPS'), 'V0.5 tutorial missing');
+
+console.log('Echo Clash V0.5 rules + experience audit passed.');

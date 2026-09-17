@@ -13,7 +13,7 @@ const io = new Server(httpServer, { cors: { origin: true, credentials: true } })
 const PORT = process.env.PORT || 3000;
 
 app.use(express.static(path.join(__dirname, 'public')));
-app.get('/health', (_req, res) => res.json({ ok: true, version: '0.4.2-alpha' }));
+app.get('/health', (_req, res) => res.json({ ok: true, version: '0.5.0-alpha' }));
 
 const rooms = new Map();
 const disconnectTimers = new Map();
@@ -298,6 +298,10 @@ function beginTurn(room){
   const p=room.players[room.turnIndex];
 
   if(!p?.alive){ advanceTurn(room); return; }
+
+  // V0.5: every scheduled turn begins with one automatic draw, up to the 15-card hand cap.
+  const turnDrawn=drawCards(room,p,1);
+  if(turnDrawn) log(room,`${p.name} draws 1 card at the start of the scheduled turn.`);
 
   if(p.shell){ log(room,`${p.name}'s Echo Shell expires.`); p.shell=null; }
 

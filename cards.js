@@ -63,7 +63,7 @@ const BARRIERS = {
 };
 
 const SUPPORT = {
-  Heal:{kind:'Support',rules:['Restore 50 current HP to a Player or Monster.','Cannot heal a Barrier or restore sacrificed max HP.']},
+  Heal:{kind:'Support',rules:['Restore 50 current HP to yourself.','Cannot heal a Barrier or restore sacrificed max HP.']},
   'Stability Boost':{kind:'Support',rules:['+2 Stability through the end of your next scheduled Action.']},
   'Output Boost':{kind:'Support',rules:['+2 Output through the end of your next scheduled Action.']},
   Cleanse:{kind:'Support',rules:['Remove Burn, Corrosion, Spike Bind, temporary Stability reduction, Stun or Freeze.','Cannot remove Rupture Strain.']},

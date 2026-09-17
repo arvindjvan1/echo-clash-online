@@ -1,51 +1,49 @@
-# Echo Clash Online V0.4.2 Gameplay Parity Alpha
+# Echo Clash Online V0.5 — Game Experience Alpha
 
-This build keeps the working V0.4 online room/server layer and restores the gameplay clarity and mechanics that regressed from the V3 local prototype.
+V0.5 keeps the V0.4.2 authoritative multiplayer combat engine and adds the first complete player-facing game shell.
 
-## Core fixes in V0.4.2
+## What V0.5 adds
 
-- Detailed cards again show damage / HP / ATK / Guard / OC and card-specific rules.
-- Live selected-card preview shows calculated Raw damage/HP, OC, Stable / Unstable / Rupture, Strain and Critical Overreach.
-- Roll and Counter decisions are surfaced as a large resolution window instead of being easy to miss in the side panel.
-- Added the missing `Barrier Form`, bringing the gameplay catalogue to 54 unique types and one gameplay deck to 108 cards at 2 copies each.
-- Hand cap is 15. Draw Action draws up to +3 without exceeding 15.
-- Trade Action remains 3 cards -> 1 or 5 cards -> 3.
-- Temporary Output / Stability boosts now expire after the end of the owner's next scheduled Action.
-- Echo Shell is a D60 temporary self-shell instead of a D0 attack.
-- Echo Collapse triggers all remaining lingering ticks after it reaches a Player, then removes those lingering effects.
-- Bind / Stone Spikes apply Spike Bind D5 for 2 turns. Bind only cancels a scheduled Action if that Player has not acted yet that round.
-- Raw Water vs Fire Clash bonus, Earth Barrier interaction, and Acid vs Monster effectiveness are encoded.
-- Wave resolves as an area attack and, after Barrier, affects the active Monster and Player simultaneously in each affected lane.
-- Primary target is the only Player allowed to Counter an area attack. Adjacent side Players cannot Counter.
-- Area Counters also spread around the original attacker if the Counter configuration itself is an area configuration.
-- Resolution chains now finish fully before elimination / winner / tie-breaker checks. This fixes premature winner declarations during area attacks.
-- Counter damage reaching the attacker can earn Strikes.
-- Consecutive Losses are reset by winning a Clash or successfully damaging another Player.
-- Monster direct Player damage can create Losses; lingering damage cannot.
-- Human 3-Loss card penalty now requires selecting exactly 2 cards instead of silently returning the last two.
-- Barrier retaliation damages the actual attacking entity, including Monsters.
-- Monsters become active after summoning and attack on their owner's next attack opportunity, including a Counter opportunity.
-- Echo Shell / Barrier / Monster / lingering fields are public, hands remain private.
-- Host can replace an offline human with AI from the match UI.
-- 5-minute reconnect grace now has an actual timeout path. If a pending Counter expires it is declined; if a pending roll expires it uses a virtual d4; if a scheduled turn expires it auto-passes.
+- Main menu with New Game, Join Game, Tutorial, Rule Book and a V0.6 Profile placeholder.
+- Complete in-app Rule Book covering setup, scheduled turns, Actions, Counter, Output/Stability/Rupture, defense, area attacks, Strikes/Losses/States, conditions, elimination and tie-breaker.
+- Card Encyclopedia generated from the same 54-card catalogue used by the server.
+- Guided seven-step tutorial match covering automatic draw, Barriers, Counter, Monsters, Unstable casting, Rupture, Strikes and States.
+- **Automatic Draw 1 at the start of every scheduled turn**, up to the 15-card hand cap.
+- Draw Action remains +3, so a normal Draw turn can add four cards total: automatic +1 plus Action +3.
+- Eight persistent Player colors used in seats, turn order, battlefield pods and Battle Log.
+- Player IDs (P1–P8) remain visible alongside color so the UI does not depend on color alone.
+- Latest Event panel in the center battlefield for faster live readability without requiring the Battle Log.
+- Resume previous room entry from the main menu.
+- Rule Book can be opened from the header without deleting the saved room session.
 
-## Current HP scaling
+## Intentionally not in V0.5
 
-- 2-4 Players: 300 HP
-- 5-6 Players: 400 HP
-- 7-8 Players: 500 HP
+- Accounts, permanent player profiles, match history and statistics are planned for V0.6.
+- Full combat/performance animation is planned for V0.7 after the experience and persistence layers settle.
 
-## Deck scaling
+## Core rules retained from V0.4.2
 
-- 2-3 Players: 1 x 108-card gameplay deck
-- 4-6 Players: 2 decks
-- 7-8 Players: 3 decks
+- 2–8 Players, free-for-all.
+- Fixed scheduled order P1 → P2 → P3… each round.
+- Counter is an immediate interruption and does not consume the defender's later scheduled Action.
+- Starting hand 12, hand cap 15.
+- Output 5, Stability 3.
+- Stable / Unstable / Rupture resolution and mandatory d4 where appropriate.
+- Critical Overreach at OC ≥ Output + 3 with D300 self-damage after resolution.
+- Barrier → Monster → Player defense order.
+- Phase Strike bypasses Barrier and Monster while Echo Shell can still protect the Player.
+- One active Monster and one active Barrier per Player.
+- Full area-resolution chain completes before elimination/winner evaluation.
+- 5 Strikes grants a Normal State.
+- 3 consecutive Losses triggers the Loss penalty.
+- 20 HP Tie-Breaker when all remaining Players fall in the same resolution chain.
+- 54 unique gameplay card types × 2 = 108 cards per gameplay deck.
+- 2–3 Players: 1 deck; 4–6: 2 decks; 7–8: 3 decks.
+- HP scaling: 300 / 400 / 500 by table size.
 
-## Tie-breaker
+## Run locally
 
-Eliminations are evaluated only after the entire attack resolution chain completes. If no Player remains alive after that chain, the Players who were alive when the chain started return at 20 HP for a Tie-Breaker Round.
-
-## Run
+Requires Node.js 20+.
 
 ```bash
 npm install
@@ -53,10 +51,23 @@ npm test
 npm start
 ```
 
-Then open `http://localhost:3000`.
+Open `http://localhost:3000`.
 
-## Hosting
+## Railway
 
-The existing Railway service can deploy this build. Replace the repository files with this V0.4.2 set and trigger a Railway deployment from `main`.
+The server listens on `process.env.PORT || 3000` and includes:
 
-Room state remains in server memory for Alpha. A full Railway container restart still removes active rooms. Database/Redis persistence should be added after multiplayer gameplay stabilizes.
+- `Dockerfile`
+- `railway.json`
+- `/health`
+- Socket.IO authoritative multiplayer server
+
+Current production setup can continue using the existing `PORT=3000` Railway variable and existing public domain.
+
+## Audit
+
+```bash
+npm test
+```
+
+The audit verifies the 54-card catalogue, 108-card deck size, Raw/Blade/Barrier calculations, area seating, Ricochet values, HP/deck scaling and Echo Shell definition. The V0.5 build also performs static syntax checks before packaging.
