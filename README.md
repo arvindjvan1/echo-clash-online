@@ -1,101 +1,62 @@
-# Echo Clash Online V0.4.1 Alpha
+# Echo Clash Online V0.4.2 Gameplay Parity Alpha
 
-## Main fixes from V0.4
+This build keeps the working V0.4 online room/server layer and restores the gameplay clarity and mechanics that regressed from the V3 local prototype.
 
-### Setup selectors
-Total Seats and AI Seats now work even when the HTML is opened as a standalone preview.
-The previous client tried to create the Socket.IO connection before the setup UI finished initializing.
-If the Node server is not running, the setup remains usable and shows a clear server-offline notice.
+## Core fixes in V0.4.2
 
-### Area attacks and seat adjacency
-Area / multiplayer attacks use the primary target's fixed seat adjacency.
+- Detailed cards again show damage / HP / ATK / Guard / OC and card-specific rules.
+- Live selected-card preview shows calculated Raw damage/HP, OC, Stable / Unstable / Rupture, Strain and Critical Overreach.
+- Roll and Counter decisions are surfaced as a large resolution window instead of being easy to miss in the side panel.
+- Added the missing `Barrier Form`, bringing the gameplay catalogue to 54 unique types and one gameplay deck to 108 cards at 2 copies each.
+- Hand cap is 15. Draw Action draws up to +3 without exceeding 15.
+- Trade Action remains 3 cards -> 1 or 5 cards -> 3.
+- Temporary Output / Stability boosts now expire after the end of the owner's next scheduled Action.
+- Echo Shell is a D60 temporary self-shell instead of a D0 attack.
+- Echo Collapse triggers all remaining lingering ticks after it reaches a Player, then removes those lingering effects.
+- Bind / Stone Spikes apply Spike Bind D5 for 2 turns. Bind only cancels a scheduled Action if that Player has not acted yet that round.
+- Raw Water vs Fire Clash bonus, Earth Barrier interaction, and Acid vs Monster effectiveness are encoded.
+- Wave resolves as an area attack and, after Barrier, affects the active Monster and Player simultaneously in each affected lane.
+- Primary target is the only Player allowed to Counter an area attack. Adjacent side Players cannot Counter.
+- Area Counters also spread around the original attacker if the Counter configuration itself is an area configuration.
+- Resolution chains now finish fully before elimination / winner / tie-breaker checks. This fixes premature winner declarations during area attacks.
+- Counter damage reaching the attacker can earn Strikes.
+- Consecutive Losses are reset by winning a Clash or successfully damaging another Player.
+- Monster direct Player damage can create Losses; lingering damage cannot.
+- Human 3-Loss card penalty now requires selecting exactly 2 cards instead of silently returning the last two.
+- Barrier retaliation damages the actual attacking entity, including Monsters.
+- Monsters become active after summoning and attack on their owner's next attack opportunity, including a Counter opportunity.
+- Echo Shell / Barrier / Monster / lingering fields are public, hands remain private.
+- Host can replace an offline human with AI from the match UI.
+- 5-minute reconnect grace now has an actual timeout path. If a pending Counter expires it is declined; if a pending roll expires it uses a virtual d4; if a scheduled turn expires it auto-passes.
 
-Example with 4 players:
-- P1 targets P3
-- affected: P2, P3, P4
+## Current HP scaling
 
-Example with 3 players:
-- P1 targets P3
-- affected: P2, P3
-- P1 is never hit by their own area
+- 2-4 Players: 300 HP
+- 5-6 Players: 400 HP
+- 7-8 Players: 500 HP
 
-Example with 2 players:
-- P1 targets P2
-- affected: P2 only
+## Deck scaling
 
-Only the PRIMARY target can Counter.
-Adjacent side players cannot Counter.
+- 2-3 Players: 1 x 108-card gameplay deck
+- 4-6 Players: 2 decks
+- 7-8 Players: 3 decks
 
-Current area-enabled attacks:
-- Raw Wave
-- Lightning Arc
-- Corrosive Surge
-- Thunder Burst only when its d4 is 4
-- Ricochet Arrow: primary takes its primary damage; adjacent side players take the Ricochet secondary damage
+## Tie-breaker
 
-The primary target's Counter changes only the primary lane.
-Side lanes still resolve independently against each side player's Barrier → Monster → Player.
+Eliminations are evaluated only after the entire attack resolution chain completes. If no Player remains alive after that chain, the Players who were alive when the chain started return at 20 HP for a Tie-Breaker Round.
 
-## Blade exact split
-There is no arbitrary 45/55 split anymore.
+## Run
 
-Blade contributes +D15.
-The Blade/Form portion attacks the Barrier.
-The Essence portion penetrates the Barrier.
-All synergy, Force and d4 scaling affects both components equally.
-
-Example:
-Fire D25 + Blade D15 + Compression ×2 = D80
-- Blade share: 15 / 40 = 37.5% → D30 attacks Barrier
-- Essence share: 25 / 40 = 62.5% → D50 penetrates Barrier
-- Monster can still Guard the penetrating damage
-
-Frost Lance:
-Ice D20 + Blade D15 = D35
-- D15 Barrier-facing
-- D20 penetrating
-
-## Monster / Barrier parity pass
-"Parity pass" means checking the digital engine against every special rule written on the cards so the web game behaves the same as the tabletop rules.
-
-V0.4.1 adds / audits:
-- Ashfang +D10 when attacking a Burning target
-- Stoneback D10 Guard mitigation
-- Stormclaw Charge and +D10 next autoattack
-- Rotcrawler adds extra lingering pressure to an already affected target
-- Emberhide D10 retaliation when it survives configuration damage
-- Shardling +1 Stability
-- Flame Barrier retaliation
-- Water Barrier D10 reduction
-- Wind Barrier Projectile reduction
-- Ice / Glacial freeze on break
-- Lightning / Magma retaliation upgrade on break
-- Acid Barrier Corrosion
-- Storm Barrier D20 + Stun on break
-- Inferno Barrier immediate Burn retaliation + next-turn Burn
-- Permafrost temporary Stability reduction
-- Barrier retaliation also works against Monster attacks
-
-There will still be playtest balancing, but these effects are no longer intentionally omitted.
-
-## Persistence
-Rooms are still stored in server memory for the Alpha.
-
-That means:
-- refreshing/reconnecting to the same running server works
-- if the hosting service restarts the Node process, active rooms disappear
-
-This is acceptable for early online playtests.
-After multiplayer behavior is stable, move room state to Redis/Postgres or another persistent store so deploys/restarts do not kill matches.
-
-## Run locally
 ```bash
 npm install
+npm test
 npm start
 ```
 
-Open:
-http://localhost:3000
+Then open `http://localhost:3000`.
 
-Do not judge Create/Join by opening public/index.html alone.
-The standalone HTML preview now lets you test setup controls, but real rooms require the Node server.
+## Hosting
+
+The existing Railway service can deploy this build. Replace the repository files with this V0.4.2 set and trigger a Railway deployment from `main`.
+
+Room state remains in server memory for Alpha. A full Railway container restart still removes active rooms. Database/Redis persistence should be added after multiplayer gameplay stabilizes.

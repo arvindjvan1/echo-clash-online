@@ -13,85 +13,17 @@ const io = new Server(httpServer, { cors: { origin: true, credentials: true } })
 const PORT = process.env.PORT || 3000;
 
 app.use(express.static(path.join(__dirname, 'public')));
-app.get('/health', (_req, res) => res.json({ ok: true, version: '0.4.1-alpha' }));
+app.get('/health', (_req, res) => res.json({ ok: true, version: '0.4.2-alpha' }));
 
 const rooms = new Map();
+const disconnectTimers = new Map();
 
-const RAW = {
-  Fire:{kind:'Essence',d:25,oc:1},
-  Water:{kind:'Essence',d:15,oc:1},
-  Earth:{kind:'Essence',d:20,oc:1},
-  Air:{kind:'Essence',d:15,oc:1},
-  Ice:{kind:'Essence',d:20,oc:2},
-  Lightning:{kind:'Essence',d:25,oc:2},
-  Acid:{kind:'Essence',d:15,oc:2},
+const {RAW,CONFIGURED,MONSTERS,BARRIERS,SUPPORT,ALL,CARD_NAMES,publicCatalog}=require('./cards');
+const {clamp,round5,hpForPlayers,decksForPlayers,areaSeatIndices,calcRaw,calcRawBarrier,calcConfigured,isArea,sideDamage,clashElementalAdjusted}=require('./rules');
 
-  Projectile:{kind:'Form',d:10,oc:1},
-  Wave:{kind:'Form',d:15,oc:2},
-  Blade:{kind:'Form',d:15,oc:2},
-  Burst:{kind:'Form',d:20,oc:2},
-  Bind:{kind:'Form',d:5,oc:2},
-  Coat:{kind:'Form',d:5,oc:1},
-
-  Compression:{kind:'Force',mult:2,oc:2},
-  Acceleration:{kind:'Force',mult:2,oc:2},
-  Amplifier:{kind:'Force',mult:3,oc:3},
-  Explosion:{kind:'Force',mult:4,oc:4},
-};
-
-const CONFIGURED = {
-  Fireball:{kind:'Configured',d:70,oc:4},
-  'Lightning Arc':{kind:'Configured',d:60,oc:5,wave:true,stun:true},
-  'Frost Lance':{kind:'Configured',d:35,oc:4,blade:true,bladeBase:15,totalBase:35},
-  'Corrosive Surge':{kind:'Configured',d:45,oc:5,wave:true,corrode:true},
-  'Flame Mantle':{kind:'Configured',d:30,oc:2,burn:true},
-  'Stone Spikes':{kind:'Configured',d:25,oc:3,bind:true},
-  'Thunder Burst':{kind:'Configured',d:45,oc:4,burst:true},
-  'Gale Shot':{kind:'Configured',d:50,oc:4},
-  'Phase Strike':{kind:'Configured',d:40,oc:4,phase:true},
-  'Echo Shell':{kind:'Configured',d:0,oc:3,shell:true},
-  'Ricochet Arrow':{kind:'Configured',d:45,oc:4,ricochet:true},
-  'Echo Collapse':{kind:'Configured',d:20,oc:4,collapse:true},
-};
-
-const MONSTERS = {
-  Ashfang:{kind:'Monster',hp:140,guard:.40,atk:30},
-  Stoneback:{kind:'Monster',hp:160,guard:.60,atk:20,mitigation:10},
-  Stormclaw:{kind:'Monster',hp:130,guard:.45,atk:25},
-  Rotcrawler:{kind:'Monster',hp:120,guard:.35,atk:20},
-  Emberhide:{kind:'Monster',hp:150,guard:.50,atk:20},
-  Shardling:{kind:'Monster',hp:100,guard:.30,atk:15,stabilityBonus:1},
-};
-
-const BARRIERS = {
-  'Earth Barrier':{kind:'Barrier',hp:120,oc:2},
-  'Flame Barrier':{kind:'Barrier',hp:105,oc:2,retaliate:5},
-  'Water Barrier':{kind:'Barrier',hp:95,oc:2,reduce:10},
-  'Wind Barrier':{kind:'Barrier',hp:95,oc:2,projectileReduce:15},
-  'Ice Barrier':{kind:'Barrier',hp:100,oc:3,onBreak:'freeze'},
-  'Lightning Barrier':{kind:'Barrier',hp:105,oc:3,retaliate:5,breakRetaliate:10},
-  'Acid Barrier':{kind:'Barrier',hp:95,oc:3,corrodeAttacker:true},
-  'Storm Barrier':{kind:'Barrier',hp:120,oc:4,onBreak:'storm'},
-  'Magma Barrier':{kind:'Barrier',hp:150,oc:3,retaliate:5,breakRetaliate:10},
-  'Glacial Barrier':{kind:'Barrier',hp:115,oc:4,reduce:10,onBreak:'freeze'},
-  'Inferno Barrier':{kind:'Barrier',hp:130,oc:3,inferno:true},
-  'Permafrost Barrier':{kind:'Barrier',hp:145,oc:4,onBreak:'stabilityDown'},
-};
-
-const SUPPORT = {
-  Heal:{kind:'Support'},
-  'Stability Boost':{kind:'Support'},
-  'Output Boost':{kind:'Support'},
-  Cleanse:{kind:'Support'},
-  'Monster Heal':{kind:'Support'},
-  Stabilize:{kind:'Support'},
-};
-
-const ALL = {...RAW, ...CONFIGURED, ...MONSTERS, ...BARRIERS, ...SUPPORT};
-const CARD_NAMES = Object.keys(ALL);
+app.get('/api/cards', (_req,res)=>res.json(publicCatalog()));
 
 const id = (prefix='x') => `${prefix}_${crypto.randomBytes(7).toString('hex')}`;
-const clamp = (n,min,max) => Math.max(min, Math.min(max,n));
 
 function shuffle(a){
   for(let i=a.length-1;i>0;i--){
@@ -114,12 +46,6 @@ function baseDeck(){
   return d;
 }
 
-function hpForPlayers(n){
-  if(n>=7) return 500;
-  if(n>=5) return 400;
-  return 300;
-}
-function decksForPlayers(n){ return Math.ceil(n/3); }
 
 function makePlayer(name,isAI=false){
   return {
@@ -128,8 +54,9 @@ function makePlayer(name,isAI=false){
 
     hand:[], hp:300, maxHp:300,
     output:5, stability:3,
-    tempOutput:0, tempStability:0,
-    stabilize:false,
+    tempOutput:0, tempStability:0, tempStabilityPenalty:0,
+    tempOutputExpireAt:null, tempStabilityExpireAt:null, stabilityPenaltyRounds:0,
+    stabilize:false, shell:null, scheduledActionsCompleted:0,
 
     strikes:0, lossStreak:0,
     ruptureStrain:0, ruptureChain:0,
@@ -179,7 +106,7 @@ function playerById(room,pid){ return room.players.find(p=>p.id===pid); }
 function alivePlayers(room){ return room.players.filter(p=>p.alive); }
 function effectiveOutput(p){ return p.output+p.tempOutput; }
 function effectiveStability(p){
-  return p.stability+p.tempStability+(p.monster&&MONSTERS[p.monster.name]?.stabilityBonus||0);
+  return Math.max(0,p.stability+p.tempStability-p.tempStabilityPenalty+(p.monster&&MONSTERS[p.monster.name]?.stabilityBonus||0));
 }
 function socketFor(p){ return p.socketId ? io.sockets.sockets.get(p.socketId) : null; }
 
@@ -190,7 +117,7 @@ function publicPlayer(p,viewerId){
     effectiveOutput:effectiveOutput(p),effectiveStability:effectiveStability(p),
     strikes:p.strikes,lossStreak:p.lossStreak,ruptureStrain:p.ruptureStrain,
     handCount:p.hand.length,hand:p.id===viewerId?p.hand:undefined,
-    monster:p.monster,barrier:p.barrier,lingering:p.lingering,skipTurns:p.skipTurns,
+    monster:p.monster,barrier:p.barrier,shell:p.shell,lingering:p.lingering,skipTurns:p.skipTurns,
   };
 }
 
@@ -232,10 +159,12 @@ function drawOne(room){
   return room.deck.pop()||null;
 }
 function drawCards(room,p,n){
-  for(let i=0;i<n;i++){
+  let drawn=0;
+  for(let i=0;i<n && p.hand.length<15;i++){
     const card=drawOne(room);
-    if(card) p.hand.push(card);
+    if(card){p.hand.push(card);drawn++;}
   }
+  return drawn;
 }
 function recycle(room,cards){ room.recycle.unshift(...cards); }
 
@@ -247,7 +176,7 @@ function allReady(room){
 function resetPlayerForMatch(p,hp){
   Object.assign(p,{
     alive:true,hand:[],maxHp:hp,hp,
-    output:5,stability:3,tempOutput:0,tempStability:0,stabilize:false,
+    output:5,stability:3,tempOutput:0,tempStability:0,tempStabilityPenalty:0,tempOutputExpireAt:null,tempStabilityExpireAt:null,stabilityPenaltyRounds:0,stabilize:false,shell:null,scheduledActionsCompleted:0,
     strikes:0,lossStreak:0,ruptureStrain:0,ruptureChain:0,
     gainedStrainThisRound:false,rupturedThisRound:false,safeRounds:0,
     monster:null,barrier:null,lingering:[],skipTurns:0,
@@ -302,11 +231,26 @@ function finishRound(room){
       }
     }else p.safeRounds=0;
 
+    if(p.stabilityPenaltyRounds>0){
+      p.stabilityPenaltyRounds--;
+      if(p.stabilityPenaltyRounds<=0) p.tempStabilityPenalty=0;
+    }
     p.gainedStrainThisRound=false;
     p.rupturedThisRound=false;
   }
   room.round++;
   log(room,`Round ${room.round} begins.`);
+}
+
+function endScheduledAction(room,p){
+  p.scheduledActionsCompleted++;
+  if(p.tempOutputExpireAt!==null && p.scheduledActionsCompleted>=p.tempOutputExpireAt){
+    p.tempOutput=0;p.tempOutputExpireAt=null;
+  }
+  if(p.tempStabilityExpireAt!==null && p.scheduledActionsCompleted>=p.tempStabilityExpireAt){
+    p.tempStability=0;p.tempStabilityExpireAt=null;
+  }
+  advanceTurn(room);
 }
 
 function advanceTurn(room){
@@ -322,11 +266,55 @@ function advanceTurn(room){
   beginTurn(room);
 }
 
+function scheduleGraceTimeout(room,p){
+  const key=`${room.code}:${p.id}`;
+  if(disconnectTimers.has(key)) clearTimeout(disconnectTimers.get(key));
+  const timer=setTimeout(()=>{
+    disconnectTimers.delete(key);
+    if(p.connected||p.isAI||room.status!=='playing') return;
+    if(room.pending?.playerId===p.id){
+      const pending=room.pending;
+      clearPending(room);
+      if(pending.kind==='counter'){
+        log(room,`${p.name}'s reconnect grace expired. Counter declined.`);
+        pending.after(null);
+      }else if(pending.kind==='roll'){
+        const roll=1+Math.floor(Math.random()*4);
+        log(room,`${p.name}'s reconnect grace expired. Virtual d4 → ${roll}.`);
+        pending.resolve(roll);
+      }
+      return;
+    }
+    if(room.players[room.turnIndex]?.id===p.id){
+      log(room,`${p.name}'s reconnect grace expired. Turn auto-passes.`);
+      endScheduledAction(room,p);
+    }
+  },room.settings.graceMs);
+  disconnectTimers.set(key,timer);
+}
+
 function beginTurn(room){
   if(room.status!=='playing') return;
   const p=room.players[room.turnIndex];
 
   if(!p?.alive){ advanceTurn(room); return; }
+
+  if(p.shell){ log(room,`${p.name}'s Echo Shell expires.`); p.shell=null; }
+
+  if(p.monster?.lingering?.length){
+    const keep=[];
+    for(const e of p.monster.lingering){
+      p.monster.hp-=e.damage;
+      log(room,`${p.name}'s ${p.monster.name} suffers D${e.damage} ${e.kind}.`);
+      e.turns--;
+      if(e.turns>0) keep.push(e);
+      if(!p.monster || p.monster.hp<=0) break;
+    }
+    if(p.monster){
+      p.monster.lingering=keep;
+      if(p.monster.hp<=0){log(room,`${p.name}'s ${p.monster.name} is defeated.`);p.monster=null;}
+    }
+  }
 
   // Lingering ticks only at the start of the affected player's scheduled turn.
   if(p.lingering.length){
@@ -339,9 +327,11 @@ function beginTurn(room){
     }
     p.lingering=keep;
 
-    if(p.hp<=0) eliminate(room,p);
-    if(room.status!=='playing') return;
-    if(!p.alive){ advanceTurn(room); return; }
+    if(p.hp<=0){
+      const chainAliveIds=alivePlayers(room).map(x=>x.id);
+      checkEndState(room,chainAliveIds,()=>advanceTurn(room));
+      return;
+    }
   }
 
   if(p.skipTurns>0){
@@ -356,8 +346,11 @@ function beginTurn(room){
   if(p.isAI) setTimeout(()=>aiTurn(room,p),250);
   else if(!p.connected && room.settings.disconnectMode==='autopass'){
     log(room,`${p.name} is disconnected and auto-passes.`);
-    advanceTurn(room);
+    endScheduledAction(room,p);
     return;
+  }else if(!p.connected && room.settings.disconnectMode==='grace'){
+    log(room,`${p.name} is disconnected. Waiting up to 5 minutes before auto-pass.`);
+    scheduleGraceTimeout(room,p);
   }
 
   emitRoom(room);
@@ -381,6 +374,14 @@ function analyzeSelection(names){
   const metas=names.map(n=>ALL[n]);
   if(metas.some(x=>!x)) return {error:'Unknown card.'};
 
+  if(names.includes('Barrier Form')){
+    const ess=names.filter(n=>RAW[n]?.kind==='Essence');
+    const invalid=names.filter(n=>n!=='Barrier Form'&&RAW[n]?.kind!=='Essence');
+    if(!ess.length) return {error:'Barrier Form needs at least one Essence.'};
+    if(invalid.length) return {error:'Barrier Form can combine with Essence cards only.'};
+    return {type:'RawBarrier',names};
+  }
+
   const nonRaw=metas.filter(m=>!['Essence','Form','Force'].includes(m.kind));
   if(nonRaw.length){
     if(names.length!==1) return {error:'Configured, Monster, Barrier and Support cards are individual Actions.'};
@@ -394,60 +395,6 @@ function analyzeSelection(names){
   return {type:'Raw',names};
 }
 
-/*
-Blade exact split:
-- Blade itself contributes +D15.
-- The Essence contribution penetrates the Barrier.
-- Every synergy / Force / d4 multiplier scales both parts equally.
-- No arbitrary 45/55 split.
-The split ratio is derived from the actual pre-multiplier components.
-*/
-function calcRaw(names){
-  const essences=names.filter(n=>RAW[n]?.kind==='Essence');
-  const form=names.find(n=>RAW[n]?.kind==='Form');
-  const forces=names.filter(n=>RAW[n]?.kind==='Force');
-
-  const essenceBase=essences.reduce((sum,n)=>sum+RAW[n].d,0);
-  const formBase=form?RAW[form].d:0;
-  let totalBase=essenceBase+formBase;
-
-  const flags={form,essences:[...essences]};
-
-  if(essences.includes('Fire')&&essences.includes('Air')) totalBase*=1.10;
-  if(essences.includes('Lightning')&&essences.includes('Air')){
-    totalBase*=1.10;
-    flags.stun=true;
-  }
-  if(essences.includes('Ice')&&essences.includes('Air')) flags.freeze=true;
-  if(essences.includes('Acid')&&essences.includes('Water')) flags.corrode=true;
-
-  if(form==='Blade'){
-    flags.blade=true;
-    flags.bladeRatio=(essenceBase+formBase)>0 ? formBase/(essenceBase+formBase) : 0;
-  }
-  if(form==='Wave') flags.wave=true;
-  if(form==='Burst') flags.burst=true;
-  if(form==='Bind') flags.bind=true;
-  if(form==='Coat') flags.coat=true;
-
-  for(const force of forces) totalBase*=RAW[force].mult;
-
-  return {
-    base:totalBase,
-    oc:names.reduce((sum,n)=>sum+RAW[n].oc,0),
-    flags,
-    label:names.join(' + '),
-  };
-}
-
-function calcConfigured(name){
-  const m=CONFIGURED[name];
-  const flags={...m};
-  if(m.blade){
-    flags.bladeRatio=(m.bladeBase||15)/(m.totalBase||m.d||1);
-  }
-  return {base:m.d||0,oc:m.oc,flags,label:name};
-}
 
 function applyRupture(room,p,oc){
   if(oc<=effectiveOutput(p)) return {rupture:false,overreach:false};
@@ -580,17 +527,19 @@ function monsterEntity(p){ return {type:'monster',owner:p}; }
 
 function addLingeringToEntity(entity,effect){
   if(entity?.type==='player') entity.player.lingering.push({...effect});
+  else if(entity?.type==='monster'&&entity.owner.monster){
+    if(!entity.owner.monster.lingering) entity.owner.monster.lingering=[];
+    entity.owner.monster.lingering.push({...effect});
+  }
 }
 
 function hurtEntity(room,entity,damage,label=''){
   if(!entity||damage<=0) return;
-
   if(entity.type==='player'){
     entity.player.hp-=damage;
     log(room,`${entity.player.name} takes D${damage}${label?` ${label}`:''}.`);
     return;
   }
-
   const owner=entity.owner;
   if(!owner.monster) return;
   const name=owner.monster.name;
@@ -606,125 +555,159 @@ function applyBarrier(room,attackerEntity,target,damage,flags,sourcePlayer){
   if(!target.barrier||flags.phase) return damage;
 
   const barrierName=target.barrier.name;
-  const b=BARRIERS[barrierName];
-  let d=damage;
+  const b=BARRIERS[barrierName]||{};
+  let baseDamage=damage;
 
-  if(b.reduce) d=Math.max(0,d-b.reduce);
-  if(b.projectileReduce&&flags.form==='Projectile') d=Math.max(0,d-b.projectileReduce);
+  if(b.reduce) baseDamage=Math.max(0,baseDamage-b.reduce);
+  if(b.projectileReduce&&flags.form==='Projectile') baseDamage=Math.max(0,baseDamage-b.projectileReduce);
+  if(baseDamage<=0) return 0;
 
-  const before=target.barrier.hp;
-  const hit=Math.min(before,d);
-  target.barrier.hp-=hit;
-  d-=hit;
+  // Earth is 20% more effective against Barriers, but only the Barrier-facing portion gets the bonus.
+  const barrierMultiplier=(flags.essences||[]).includes('Earth')?1.20:1;
+  const barrierIncoming=baseDamage*barrierMultiplier;
+  const absorbedBarrier=Math.min(target.barrier.hp,barrierIncoming);
+  target.barrier.hp-=absorbedBarrier;
+  const baseSpent=absorbedBarrier/barrierMultiplier;
+  let remaining=Math.max(0,baseDamage-baseSpent);
 
-  // Any attacker that hits a retaliating Barrier gets hit.
-  let retaliation=b.retaliate||0;
-  if(target.barrier.hp<=0&&b.breakRetaliate) retaliation=b.breakRetaliate;
-  if(retaliation) hurtEntity(room,attackerEntity,retaliation,'from Barrier retaliation');
+  if(absorbedBarrier>0){
+    let retaliation=b.retaliate||0;
+    if(target.barrier.hp<=0&&b.breakRetaliate) retaliation=b.breakRetaliate;
+    if(retaliation) hurtEntity(room,attackerEntity,retaliation,'from Barrier retaliation');
 
-  if(b.corrodeAttacker){
-    addLingeringToEntity(attackerEntity,{kind:'Corrosion',damage:10,turns:2});
-  }
-
-  if(b.inferno){
-    hurtEntity(room,attackerEntity,10,'from Inferno Barrier');
-    addLingeringToEntity(attackerEntity,{kind:'Burn',damage:10,turns:1});
+    if(b.corrodeAttacker) addLingeringToEntity(attackerEntity,{kind:'Corrosion',damage:10,turns:2});
+    if(b.inferno){
+      hurtEntity(room,attackerEntity,10,'from Inferno Barrier');
+      addLingeringToEntity(attackerEntity,{kind:'Burn',damage:10,turns:1});
+    }
   }
 
   if(target.barrier.hp<=0){
     target.barrier=null;
     log(room,`${target.name}'s ${barrierName} breaks.`);
-
     if(b.onBreak==='freeze'&&sourcePlayer) sourcePlayer.skipTurns=Math.max(sourcePlayer.skipTurns,1);
-
     if(b.onBreak==='storm'){
       hurtEntity(room,attackerEntity,20,'from Storm Barrier break');
       if(attackerEntity.type==='player') attackerEntity.player.skipTurns=Math.max(attackerEntity.player.skipTurns,1);
+      if(attackerEntity.type==='monster') attackerEntity.owner.skipTurns=Math.max(attackerEntity.owner.skipTurns,1);
     }
-
     if(b.onBreak==='stabilityDown'&&sourcePlayer){
-      sourcePlayer.tempStability-=2;
+      sourcePlayer.tempStabilityPenalty=Math.max(sourcePlayer.tempStabilityPenalty,2);
+      sourcePlayer.stabilityPenaltyRounds=Math.max(sourcePlayer.stabilityPenaltyRounds,2);
     }
   }
-
-  return d;
+  return round5(remaining);
 }
 
-function hitMonsterGuard(room,sourcePlayer,target,damage,originalDamage,sourceType){
-  if(damage<=0||!target.monster) return damage;
+function acidMonsterMultiplier(flags){ return (flags.essences||[]).includes('Acid')?1.20:1; }
 
+function hitMonsterGuard(room,sourcePlayer,target,damage,originalDamage,sourceType,flags){
+  if(damage<=0||!target.monster) return damage;
   const monsterName=target.monster.name;
   const m=MONSTERS[monsterName];
+  const acidMult=acidMonsterMultiplier(flags);
 
   const guardPotential=Math.round(originalDamage*m.guard);
   const intercept=Math.min(damage,guardPotential);
-  const absorbCapacity=target.monster.hp+(m.mitigation||0);
+  const mitigation=m.mitigation||0;
+  // Convert Monster HP to equivalent incoming attack units when Acid is amplified against Monsters.
+  const absorbCapacity=(target.monster.hp/acidMult)+mitigation;
   const absorbed=Math.min(intercept,absorbCapacity);
-  const hpDamage=Math.max(0,absorbed-(m.mitigation||0));
+  const afterMitigation=Math.max(0,absorbed-mitigation);
+  const hpDamage=Math.min(target.monster.hp,Math.round(afterMitigation*acidMult));
 
   target.monster.hp-=hpDamage;
-  damage-=absorbed;
-  log(room,`${target.name}'s ${monsterName} Guards D${absorbed}.`);
+  damage=Math.max(0,damage-absorbed);
+  log(room,`${target.name}'s ${monsterName} Guards D${round5(absorbed)}${acidMult>1?' (Acid +20% vs Monster)':''}.`);
 
-  if(monsterName==='Stormclaw'&&target.monster.hp>0&&hpDamage>0){
-    target.monster.charge=1;
-  }
-
+  if(monsterName==='Stormclaw'&&target.monster.hp>0&&hpDamage>0) target.monster.charge=1;
   if(monsterName==='Emberhide'&&target.monster.hp>0&&hpDamage>0&&sourceType==='configuration'){
     sourcePlayer.hp-=10;
     log(room,`${target.name}'s Emberhide retaliates D10 to ${sourcePlayer.name}.`);
   }
-
   if(target.monster.hp<=0){
     log(room,`${target.name}'s ${monsterName} is defeated.`);
     target.monster=null;
   }
+  return round5(damage);
+}
 
+function hitShell(room,target,damage){
+  if(damage<=0||!target.shell) return damage;
+  const absorbed=Math.min(target.shell.hp,damage);
+  target.shell.hp-=absorbed;
+  damage-=absorbed;
+  log(room,`${target.name}'s Echo Shell absorbs D${absorbed}.`);
+  if(target.shell.hp<=0){ target.shell=null; log(room,`${target.name}'s Echo Shell breaks.`); }
   return damage;
+}
+
+function damageMonsterDirect(room,sourcePlayer,target,damage,flags,sourceType){
+  if(!target.monster||damage<=0) return;
+  const name=target.monster.name;
+  const mult=acidMonsterMultiplier(flags);
+  const hpDamage=round5(damage*mult);
+  target.monster.hp-=hpDamage;
+  log(room,`${target.name}'s ${name} takes D${hpDamage}${mult>1?' (Acid +20%)':''} from the Wave.`);
+  if(name==='Stormclaw'&&target.monster.hp>0) target.monster.charge=1;
+  if(name==='Emberhide'&&target.monster.hp>0&&sourceType==='configuration'){
+    sourcePlayer.hp-=10;log(room,`${target.name}'s Emberhide retaliates D10 to ${sourcePlayer.name}.`);
+  }
+  if(target.monster.hp<=0){log(room,`${target.name}'s ${name} is defeated.`);target.monster=null;}
 }
 
 function applyDefense(room,sourcePlayer,target,damage,flags,sourceType,done){
   if(damage<=0){ done(false); return; }
-
   const original=damage;
   let d=damage;
 
   if(!flags.phase){
     if(flags.blade&&target.barrier){
-      // Exact Blade component split, based on actual Blade/Form contribution.
       const ratio=clamp(flags.bladeRatio||0,0,1);
-      const barrierPart=Math.round((d*ratio)/5)*5;
+      const barrierPart=round5(d*ratio);
       const penetratingPart=Math.max(0,d-barrierPart);
-      const barrierRemainder=applyBarrier(
-        room,playerEntity(sourcePlayer),target,barrierPart,flags,sourcePlayer
-      );
-      d=penetratingPart+barrierRemainder;
-    }else{
-      d=applyBarrier(room,playerEntity(sourcePlayer),target,d,flags,sourcePlayer);
-    }
+      const rem=applyBarrier(room,playerEntity(sourcePlayer),target,barrierPart,flags,sourcePlayer);
+      d=penetratingPart+rem;
+    }else d=applyBarrier(room,playerEntity(sourcePlayer),target,d,flags,sourcePlayer);
   }
 
-  if(d>0&&target.monster&&!flags.phase){
-    d=hitMonsterGuard(room,sourcePlayer,target,d,original,sourceType);
+  // Wave is broad inside every affected player's field: after Barrier, it hits Monster + Player simultaneously.
+  if(d>0&&flags.wave&&!flags.phase){
+    if(target.monster) damageMonsterDirect(room,sourcePlayer,target,d,flags,sourceType);
+  }else if(d>0&&target.monster&&!flags.phase){
+    d=hitMonsterGuard(room,sourcePlayer,target,d,original,sourceType,flags);
   }
 
+  d=hitShell(room,target,d);
   let reached=false;
   if(d>0){
-    target.hp-=d;
-    reached=true;
+    target.hp-=d;reached=true;
     log(room,`${target.name} takes D${d} player damage.`);
   }
-
   done(reached);
 }
 
-function applyStatusOnPlayer(target,result){
+function applyStatusOnPlayer(room,target,result){
   const f=result.flags||{};
-  if(f.stun||f.freeze||f.bind) target.skipTurns=Math.max(target.skipTurns,1);
+  if(f.stun||f.freeze) target.skipTurns=Math.max(target.skipTurns,1);
+  if(f.bind){
+    const targetIndex=room.players.findIndex(p=>p.id===target.id);
+    // Bind stops a scheduled Action only if that seat has not acted yet this round.
+    if(targetIndex>room.turnIndex) target.skipTurns=Math.max(target.skipTurns,1);
+    target.lingering.push({kind:'Spike Bind',damage:5,turns:2});
+  }
   if(f.corrode) target.lingering.push({kind:'Corrosion',damage:10,turns:2});
   if(f.burn) target.lingering.push({kind:'Burn',damage:10,turns:2});
   if(f.coat&&f.essences?.includes('Fire')) target.lingering.push({kind:'Burn',damage:10,turns:2});
   if(f.coat&&f.essences?.includes('Acid')) target.lingering.push({kind:'Corrosion',damage:10,turns:2});
+}
+
+function triggerEchoCollapse(room,target,result){
+  if(!result.flags?.collapse||!target.lingering.length) return;
+  let total=0;
+  for(const e of target.lingering) total+=e.damage*e.turns;
+  target.lingering=[];
+  if(total>0){target.hp-=total;log(room,`Echo Collapse triggers D${total} stored lingering damage on ${target.name}.`);}
 }
 
 function applyNormalState(p,pick){
@@ -735,62 +718,41 @@ function applyNormalState(p,pick){
 
 function awardStrike(room,p,done){
   p.strikes++;
-
   if(p.strikes<5){ done(); return; }
   p.strikes-=5;
-
   if(p.isAI){
     const pick=['v','o','s'][Math.floor(Math.random()*3)];
-    applyNormalState(p,pick);
-    log(room,`${p.name} earns a Normal State.`);
-    done();
-    return;
+    applyNormalState(p,pick);log(room,`${p.name} earns a Normal State.`);done();return;
   }
-
   room.phase='state_choice';
-  room.pending={
-    kind:'state_choice',playerId:p.id,label:'Choose a Normal State',
-    resolve:(pick)=>{ applyNormalState(p,pick); done(); },
-  };
+  room.pending={kind:'state_choice',playerId:p.id,label:'Choose a Normal State',resolve:(pick)=>{applyNormalState(p,pick);done();}};
   emitRoom(room);
 }
 
 function applyLoss(room,p,done){
   p.lossStreak++;
-
   if(p.lossStreak<3){ done(); return; }
   p.lossStreak=0;
-
   if(p.isAI){
-    if(p.hand.length>=2){
-      recycle(room,p.hand.splice(-2));
-      log(room,`${p.name} returns 2 cards after 3 consecutive Losses.`);
-    }else{
-      p.maxHp=Math.max(20,p.maxHp-100);
-      p.hp=Math.min(p.hp,p.maxHp);
-      log(room,`${p.name} sacrifices Core Vitality.`);
-    }
-    done();
-    return;
+    if(p.hand.length>=2){recycle(room,p.hand.splice(-2));log(room,`${p.name} returns 2 cards after 3 consecutive Losses.`);}
+    else{p.maxHp=Math.max(20,p.maxHp-100);p.hp=Math.min(p.hp,p.maxHp);log(room,`${p.name} sacrifices Core Vitality.`);}
+    done();return;
   }
-
   room.phase='loss_choice';
-  room.pending={
-    kind:'loss_choice',playerId:p.id,label:'3 consecutive Losses',
-    resolve:(choice)=>{
-      if(choice==='cards'&&p.hand.length>=2) recycle(room,p.hand.splice(-2));
-      else{
-        p.maxHp=Math.max(20,p.maxHp-100);
-        p.hp=Math.min(p.hp,p.maxHp);
-      }
-      done();
-    },
-  };
+  room.pending={kind:'loss_choice',playerId:p.id,label:'3 consecutive Losses',resolve:(choice)=>{
+    if(choice?.type==='cards'){
+      const idx=validateIndices(p,choice.indices);
+      if(!idx||idx.length!==2) return false;
+      consumeIndices(room,p,idx);
+    }else{
+      p.maxHp=Math.max(20,p.maxHp-100);p.hp=Math.min(p.hp,p.maxHp);
+    }
+    done();return true;
+  }};
   emitRoom(room);
 }
 
 function registerPlayerHit(room,source,target,sourceType,done){
-  // Lingering does not create Losses. Monster direct damage does.
   applyLoss(room,target,()=>{
     if(sourceType==='configuration') awardStrike(room,source,done);
     else done();
@@ -800,90 +762,47 @@ function resetLossOnSuccess(p){ p.lossStreak=0; }
 
 function eliminate(room,p){
   if(!p.alive) return;
-  p.alive=false;
-  p.hp=0;
-  p.monster=null;
-  p.barrier=null;
-  p.lingering=[];
-  p.skipTurns=0;
+  p.alive=false;p.hp=0;p.monster=null;p.barrier=null;p.shell=null;p.lingering=[];p.skipTurns=0;
   log(room,`${p.name} is eliminated.`);
 }
 
-function checkEndState(room,involved,done){
-  for(const p of room.players){
-    if(p.alive&&p.hp<=0) eliminate(room,p);
-  }
-
+function checkEndState(room,chainAliveIds,done){
+  const chainIds=new Set(chainAliveIds||[]);
+  const deadNow=room.players.filter(p=>p.alive&&p.hp<=0);
+  for(const p of deadNow) eliminate(room,p);
   const alive=alivePlayers(room);
 
   if(alive.length===1){
-    room.status='ended';
-    room.phase='ended';
-    room.pending=null;
-    log(room,`${alive[0].name} wins Echo Clash.`);
-    emitRoom(room);
-    return;
+    room.status='ended';room.phase='ended';room.pending=null;
+    log(room,`${alive[0].name} wins Echo Clash.`);emitRoom(room);return;
   }
-
   if(alive.length===0){
-    const tied=[...new Map((involved||[]).filter(Boolean).map(p=>[p.id,p])).values()];
+    const tied=room.players.filter(p=>chainIds.has(p.id));
     for(const p of tied){
-      p.alive=true;
-      p.hp=20;
-      p.monster=null;
-      p.barrier=null;
-      p.lingering=[];
-      p.skipTurns=0;
-      p.lossStreak=0;
-      p.tempOutput=0;
-      p.tempStability=0;
-      p.stabilize=false;
+      p.alive=true;p.hp=20;p.monster=null;p.barrier=null;p.shell=null;p.lingering=[];p.skipTurns=0;
+      p.lossStreak=0;p.tempOutput=0;p.tempStability=0;p.tempStabilityPenalty=0;p.stabilityPenaltyRounds=0;p.stabilize=false;
     }
-
-    room.tieBreaker=true;
-    room.status='playing';
-    room.phase='action';
-    room.pending=null;
-    room.round++;
+    room.tieBreaker=true;room.status='playing';room.phase='action';room.pending=null;room.round++;
     room.turnIndex=room.players.findIndex(p=>p.alive);
     log(room,`TIE BREAKER: ${tied.map(p=>p.name).join(' & ')} return at 20 HP.`);
-    beginTurn(room);
-    return;
+    beginTurn(room);return;
   }
-
   done();
 }
 
-function hasBurn(target){
-  return target.lingering.some(e=>e.kind==='Burn');
-}
+function hasBurn(target){ return target.lingering.some(e=>e.kind==='Burn'); }
 
 function monsterAutoAttack(room,owner,target,done){
   if(!owner.monster||!target.alive){ done(); return; }
-
-  const monsterName=owner.monster.name;
-  const m=MONSTERS[monsterName];
+  const monsterName=owner.monster.name,m=MONSTERS[monsterName];
   let damage=m.atk;
-
   if(monsterName==='Ashfang'&&hasBurn(target)) damage+=10;
-
-  if(monsterName==='Stormclaw'&&owner.monster.charge){
-    damage+=10;
-    owner.monster.charge=0;
-  }
-
+  if(monsterName==='Stormclaw'&&owner.monster.charge){damage+=10;owner.monster.charge=0;}
   log(room,`${owner.name}'s ${monsterName} attacks ${target.name} for D${damage}.`);
 
   let d=damage;
-  if(target.barrier){
-    d=applyBarrier(room,monsterEntity(owner),target,d,{},owner);
-  }
-
-  if(!owner.monster){
-    checkEndState(room,[owner,target],done);
-    return;
-  }
-
+  if(target.barrier) d=applyBarrier(room,monsterEntity(owner),target,d,{},owner);
+  if(!owner.monster){done();return;}
   if(d>0&&target.monster){
     const def=MONSTERS[target.monster.name];
     const guard=Math.min(d,Math.round(d*def.guard));
@@ -891,339 +810,205 @@ function monsterAutoAttack(room,owner,target,done){
     const absorbed=Math.min(guard,capacity);
     const hpDamage=Math.max(0,absorbed-(def.mitigation||0));
     const targetMonsterName=target.monster.name;
-
-    target.monster.hp-=hpDamage;
-    d-=absorbed;
-
-    if(targetMonsterName==='Stormclaw'&&target.monster.hp>0&&hpDamage>0){
-      target.monster.charge=1;
-    }
-
-    if(target.monster.hp<=0){
-      log(room,`${target.name}'s ${targetMonsterName} is defeated.`);
-      target.monster=null;
-    }
+    target.monster.hp-=hpDamage;d-=absorbed;
+    if(targetMonsterName==='Stormclaw'&&target.monster.hp>0&&hpDamage>0) target.monster.charge=1;
+    if(target.monster.hp<=0){log(room,`${target.name}'s ${targetMonsterName} is defeated.`);target.monster=null;}
   }
-
+  d=hitShell(room,target,d);
   if(d>0){
-    target.hp-=d;
-    log(room,`${target.name} takes D${d} from ${monsterName}.`);
-
+    target.hp-=d;log(room,`${target.name} takes D${d} from ${monsterName}.`);
+    resetLossOnSuccess(owner);
     if(monsterName==='Rotcrawler'&&target.lingering.length){
-      const rotStacks=target.lingering.filter(e=>e.kind==='Rotcrawler').length;
-      if(rotStacks<2) target.lingering.push({kind:'Rotcrawler',damage:10,turns:1});
+      const stacks=target.lingering.filter(e=>e.kind==='Rotcrawler').length;
+      if(stacks<2) target.lingering.push({kind:'Rotcrawler',damage:10,turns:1});
     }
-
-    registerPlayerHit(room,owner,target,'monster',()=>{
-      checkEndState(room,[owner,target],done);
-    });
+    registerPlayerHit(room,owner,target,'monster',done);
   }else done();
 }
 
 function finishAttackOpportunity(room,owner,opponent,result,done){
-  const afterOverreach=()=>{
-    if(owner.hp<=0||opponent.hp<=0){
-      checkEndState(room,[owner,opponent],done);
-      return;
-    }
-
-    // Monster follows its owner's next attack opportunity, including Counter.
-    if(owner.monster) monsterAutoAttack(room,owner,opponent,done);
-    else done();
-  };
-
-  if(result?.overreach){
-    owner.hp-=300;
-    log(room,`${owner.name} suffers D300 Critical Overreach.`);
-  }
-
-  afterOverreach();
+  if(result?.overreach){owner.hp-=300;log(room,`${owner.name} suffers D300 Critical Overreach.`);}
+  if(owner.monster) monsterAutoAttack(room,owner,opponent,done);
+  else done();
 }
 
-/*
-Seat-adjacent multiplayer area rule:
-- Primary target is always affected.
-- Immediate left/right seats of the primary target are also affected.
-- Attacker is excluded from their own area.
-- Dead players are skipped as victims, but adjacency is based on fixed seats.
-Thus:
-2 players: primary target only.
-3 players: primary target + the one other non-attacker.
-4+ players: primary target + up to two side players.
-Only the PRIMARY target may Counter.
-*/
 function sideTargets(room,attacker,primary){
   const n=room.players.length;
-  const i=room.players.findIndex(p=>p.id===primary.id);
-  if(i<0||n<2) return [];
-
-  const candidateIdx=[(i-1+n)%n,(i+1)%n];
-  const seen=new Set();
-  const out=[];
-
-  for(const idx of candidateIdx){
-    const p=room.players[idx];
-    if(!p||!p.alive||p.id===attacker.id||p.id===primary.id||seen.has(p.id)) continue;
-    seen.add(p.id);
-    out.push(p);
-  }
-
-  return out;
+  const primaryIndex=room.players.findIndex(p=>p.id===primary.id);
+  if(primaryIndex<0) return [];
+  return areaSeatIndices(primaryIndex,n)
+    .map(i=>room.players[i])
+    .filter(p=>p&&p.alive&&p.id!==primary.id&&p.id!==attacker.id);
 }
 
-function isAreaAttack(result){
-  const f=result.flags||{};
-  if(f.wave) return true;
-  if(f.burst&&result.roll===4) return true;
-  if(f.ricochet&&result.damage>0) return true;
-  return false;
-}
-
-function sideDamageFor(result){
-  const f=result.flags||{};
-  if(f.ricochet){
-    if(result.roll===1) return 0;
-    if(result.roll===2) return 15;
-    if(result.roll===4) return 30;
-    return 25; // Stable or roll 3
-  }
-  return result.damage;
-}
-
-function resolveSideAreaHits(room,attacker,primary,attackResult,done){
-  if(!isAreaAttack(attackResult)){ done(); return; }
-
+function resolveAreaHits(room,attacker,primary,result,done){
+  if(!isArea(result)){done();return;}
   const sides=sideTargets(room,attacker,primary);
-  if(!sides.length){ done(); return; }
-
-  const damage=sideDamageFor(attackResult);
-  if(damage<=0){ done(); return; }
-
-  log(room,`${attackResult.label} spreads to ${sides.map(p=>p.name).join(' & ')}. Side players cannot Counter.`);
-
-  let index=0;
+  const damage=sideDamage(result);
+  if(!sides.length||damage<=0){done();return;}
+  log(room,`${result.label} spreads to ${sides.map(p=>p.name).join(' & ')}. Side Players cannot Counter.`);
+  let i=0;
   const next=()=>{
-    if(index>=sides.length){ done(); return; }
-    const target=sides[index++];
-
-    // Side lanes use the original attack result and resolve their own defenses.
-    applyDefense(room,attacker,target,damage,attackResult.flags,'configuration',(reached)=>{
+    if(i>=sides.length){done();return;}
+    const target=sides[i++];
+    applyDefense(room,attacker,target,damage,result.flags,'configuration',(reached)=>{
       if(reached){
-        applyStatusOnPlayer(target,attackResult);
-        registerPlayerHit(room,attacker,target,'configuration',()=>{
-          checkEndState(room,[attacker,primary,...sides],next);
-        });
-      }else{
-        checkEndState(room,[attacker,primary,...sides],next);
-      }
+        resetLossOnSuccess(attacker);applyStatusOnPlayer(room,target,result);triggerEchoCollapse(room,target,result);
+        registerPlayerHit(room,attacker,target,'configuration',next);
+      }else next();
     });
   };
   next();
 }
 
 function resolvePrimaryClash(room,attacker,defender,attackResult,counterResult,done){
-  const A=attackResult.damage;
-  const C=counterResult?counterResult.damage:0;
-
+  const adjusted=clashElementalAdjusted(attackResult,counterResult);
+  const A=adjusted.attack,C=counterResult?adjusted.counter:0;
   if(counterResult){
-    if(A===C){
-      log(room,`Clash nullified: D${A} vs D${C}.`);
-      done({primaryReached:false,counterReached:false});
-      return;
-    }
-
+    if(A===C){log(room,`Clash nullified: D${A} vs D${C}.`);done();return;}
     if(A>C){
       resetLossOnSuccess(attacker);
-      const residual=A-C;
-      log(room,`${attacker.name} wins Clash. Residual D${residual} → ${defender.name}.`);
-
+      const residual=A-C;log(room,`${attacker.name} wins Clash. Residual D${residual} → ${defender.name}.`);
       applyDefense(room,attacker,defender,residual,attackResult.flags,'configuration',(reached)=>{
-        if(reached){
-          applyStatusOnPlayer(defender,attackResult);
-          registerPlayerHit(room,attacker,defender,'configuration',()=>{
-            done({primaryReached:true,counterReached:false});
-          });
-        }else done({primaryReached:false,counterReached:false});
-      });
-      return;
+        if(reached){applyStatusOnPlayer(room,defender,attackResult);triggerEchoCollapse(room,defender,attackResult);registerPlayerHit(room,attacker,defender,'configuration',done);}
+        else done();
+      });return;
     }
-
     resetLossOnSuccess(defender);
-    const residual=C-A;
-    log(room,`${defender.name} wins Counter Clash. Residual D${residual} → ${attacker.name}.`);
-
+    const residual=C-A;log(room,`${defender.name} wins Counter Clash. Residual D${residual} → ${attacker.name}.`);
     applyDefense(room,defender,attacker,residual,counterResult.flags,'configuration',(reached)=>{
-      if(reached){
-        applyStatusOnPlayer(attacker,counterResult);
-        registerPlayerHit(room,defender,attacker,'configuration',()=>{
-          done({primaryReached:false,counterReached:true});
-        });
-      }else done({primaryReached:false,counterReached:false});
-    });
-    return;
+      if(reached){applyStatusOnPlayer(room,attacker,counterResult);triggerEchoCollapse(room,attacker,counterResult);registerPlayerHit(room,defender,attacker,'configuration',done);}
+      else done();
+    });return;
   }
 
-  resetLossOnSuccess(attacker);
   applyDefense(room,attacker,defender,A,attackResult.flags,'configuration',(reached)=>{
-    if(reached){
-      applyStatusOnPlayer(defender,attackResult);
-      registerPlayerHit(room,attacker,defender,'configuration',()=>{
-        done({primaryReached:true,counterReached:false});
-      });
-    }else done({primaryReached:false,counterReached:false});
+    if(reached){resetLossOnSuccess(attacker);applyStatusOnPlayer(room,defender,attackResult);triggerEchoCollapse(room,defender,attackResult);registerPlayerHit(room,attacker,defender,'configuration',done);}
+    else done();
   });
 }
 
 function resolveAttackSequence(room,attacker,primary,attackResult,counterResult,done){
-  /*
-  The primary target's Counter only changes the PRIMARY lane.
-  Area side lanes still resolve independently from the original attack.
-  Side victims never receive Counter prompts.
-  */
   resolvePrimaryClash(room,attacker,primary,attackResult,counterResult,()=>{
-    resolveSideAreaHits(room,attacker,primary,attackResult,()=>{
-      const afterCounterOpportunity=()=>{
-        finishAttackOpportunity(room,attacker,primary,attackResult,done);
+    resolveAreaHits(room,attacker,primary,attackResult,()=>{
+      const counterArea=()=>{
+        if(!counterResult){afterCounterMonster();return;}
+        // A Counter is itself an attack. If it is an area configuration, it spreads around the original attacker.
+        resolveAreaHits(room,primary,attacker,counterResult,afterCounterMonster);
       };
-
-      if(counterResult){
-        // Counter is an attack opportunity, so defender's active Monster follows attacker.
-        finishAttackOpportunity(room,primary,attacker,counterResult,afterCounterOpportunity);
-      }else afterCounterOpportunity();
+      const afterCounterMonster=()=>{
+        if(counterResult) finishAttackOpportunity(room,primary,attacker,counterResult,afterAttackerMonster);
+        else afterAttackerMonster();
+      };
+      const afterAttackerMonster=()=>finishAttackOpportunity(room,attacker,primary,attackResult,done);
+      counterArea();
     });
   });
 }
 
 function commitAttack(room,attacker,target,indices,scheduled=true){
-  const valid=validateIndices(attacker,indices);
-  if(!valid) return false;
-
-  const names=namesAt(attacker,valid);
-  const info=analyzeSelection(names);
-  if(info.error||!['Raw','Configured'].includes(info.type)) return false;
-
+  const valid=validateIndices(attacker,indices);if(!valid) return false;
+  const names=namesAt(attacker,valid),info=analyzeSelection(names);
+  if(info.error||!['Raw','Configured'].includes(info.type)||info.name==='Echo Shell') return false;
+  const chainAliveIds=alivePlayers(room).map(p=>p.id);
   consumeIndices(room,attacker,valid);
   const calc=info.type==='Raw'?calcRaw(names):calcConfigured(info.name);
-
   room.phase='resolution';
   resolveConfiguration(room,attacker,calc,(attackResult)=>{
     log(room,`${attacker.name} attacks ${target.name} with ${attackResult.label}: D${attackResult.damage}${attackResult.roll?` • d4 ${attackResult.roll}`:''}.`);
-
     requestCounter(room,attacker,target,attackResult,(counterResult)=>{
       resolveAttackSequence(room,attacker,target,attackResult,counterResult,()=>{
-        checkEndState(room,[attacker,target,...sideTargets(room,attacker,target)],()=>{
-          room.pending=null;
-          room.phase='action';
-          if(scheduled) advanceTurn(room);
-          else emitRoom(room);
+        checkEndState(room,chainAliveIds,()=>{
+          room.pending=null;room.phase='action';
+          if(scheduled) endScheduledAction(room,attacker);else emitRoom(room);
         });
       });
     });
   });
-
   return true;
 }
 
+function deployResolvedBarrier(room,p,name,result){
+  if(p.barrier){log(room,`${p.name}'s ${p.barrier.name} is replaced.`);p.barrier=null;}
+  if(result.damage>0){p.barrier={name,hp:result.damage};log(room,`${p.name} deploys ${name} at ${result.damage} HP.`);}
+  else log(room,`${p.name}'s ${name} fails to form.`);
+  if(result.overreach){p.hp-=300;log(room,`${p.name} suffers D300 Critical Overreach.`);}
+}
+
 function playUtility(room,p,indices){
-  const valid=validateIndices(p,indices);
-  if(!valid) return false;
+  const valid=validateIndices(p,indices);if(!valid) return false;
+  const names=namesAt(p,valid),info=analyzeSelection(names);
+  if(info.error) return false;
 
-  const names=namesAt(p,valid);
-  const info=analyzeSelection(names);
-  if(info.error||names.length!==1) return false;
-
-  const name=names[0];
-  const m=ALL[name];
-
-  if(info.type==='Monster'){
+  if(info.type==='RawBarrier'){
     consumeIndices(room,p,valid);
-    p.monster={name,hp:m.hp,charge:0};
-    log(room,`${p.name} summons ${name}. It will attack on ${p.name}'s next attack opportunity.`);
-    advanceTurn(room);
-    return true;
-  }
-
-  if(info.type==='Barrier'){
-    consumeIndices(room,p,valid);
-
-    // Replacing a Barrier simply removes the old Barrier.
-    if(p.barrier){
-      log(room,`${p.name}'s ${p.barrier.name} is replaced.`);
-      p.barrier=null;
-    }
-
-    resolveConfiguration(room,p,{base:m.hp,oc:m.oc,flags:{barrier:true},label:name},(result)=>{
-      if(result.damage>0){
-        p.barrier={name,hp:result.damage};
-        log(room,`${p.name} deploys ${name} at ${result.damage} HP.`);
-      }else log(room,`${p.name}'s ${name} fails to form.`);
-
-      if(result.overreach){
-        p.hp-=300;
-        log(room,`${p.name} suffers D300 Critical Overreach.`);
-      }
-
-      checkEndState(room,[p],()=>advanceTurn(room));
+    const calc=calcRawBarrier(names);
+    resolveConfiguration(room,p,calc,(result)=>{
+      deployResolvedBarrier(room,p,calc.barrierName,result);
+      checkEndState(room,[p.id],()=>endScheduledAction(room,p));
     });
     return true;
   }
 
-  if(info.type==='Support'){
-    consumeIndices(room,p,valid);
+  if(names.length!==1) return false;
+  const name=names[0],m=ALL[name];
 
-    if(name==='Heal') p.hp=Math.min(p.maxHp,p.hp+50);
-    else if(name==='Stability Boost') p.tempStability+=2;
-    else if(name==='Output Boost') p.tempOutput+=2;
-    else if(name==='Monster Heal'&&p.monster){
-      p.monster.hp=Math.min(MONSTERS[p.monster.name].hp,p.monster.hp+80);
-    }
-    else if(name==='Cleanse'){
-      p.lingering=[];
-      p.skipTurns=0;
-      if(p.tempStability<0) p.tempStability=0;
-    }
-    else if(name==='Stabilize') p.stabilize=true;
-
-    log(room,`${p.name} uses ${name}.`);
-    advanceTurn(room);
-    return true;
+  if(info.type==='Monster'){
+    consumeIndices(room,p,valid);p.monster={name,hp:m.hp,charge:0,lingering:[]};
+    log(room,`${p.name} summons ${name}. It attacks on ${p.name}'s next attack opportunity.`);
+    endScheduledAction(room,p);return true;
   }
 
+  if(info.type==='Barrier'){
+    consumeIndices(room,p,valid);
+    resolveConfiguration(room,p,{base:m.hp,oc:m.oc,flags:{barrier:true},label:name},(result)=>{
+      deployResolvedBarrier(room,p,name,result);
+      checkEndState(room,[p.id],()=>endScheduledAction(room,p));
+    });return true;
+  }
+
+  if(info.type==='Configured'&&name==='Echo Shell'){
+    consumeIndices(room,p,valid);
+    resolveConfiguration(room,p,{base:60,oc:m.oc,flags:{shell:true},label:name},(result)=>{
+      if(result.damage>0){p.shell={hp:result.damage};log(room,`${p.name} forms Echo Shell with D${result.damage} temporary HP.`);}
+      else log(room,`${p.name}'s Echo Shell fails to form.`);
+      if(result.overreach){p.hp-=300;log(room,`${p.name} suffers D300 Critical Overreach.`);}
+      checkEndState(room,[p.id],()=>endScheduledAction(room,p));
+    });return true;
+  }
+
+  if(info.type==='Support'){
+    consumeIndices(room,p,valid);
+    if(name==='Heal') p.hp=Math.min(p.maxHp,p.hp+50);
+    else if(name==='Stability Boost'){
+      p.tempStability=2;p.tempStabilityExpireAt=p.scheduledActionsCompleted+2;
+    }else if(name==='Output Boost'){
+      p.tempOutput=2;p.tempOutputExpireAt=p.scheduledActionsCompleted+2;
+    }else if(name==='Monster Heal'&&p.monster) p.monster.hp=Math.min(MONSTERS[p.monster.name].hp,p.monster.hp+80);
+    else if(name==='Cleanse'){
+      p.lingering=[];p.skipTurns=0;p.tempStabilityPenalty=0;p.stabilityPenaltyRounds=0;
+    }else if(name==='Stabilize') p.stabilize=true;
+    log(room,`${p.name} uses ${name}.`);endScheduledAction(room,p);return true;
+  }
   return false;
 }
 
 function aiTurn(room,p){
   if(room.status!=='playing'||room.players[room.turnIndex]?.id!==p.id||room.pending) return;
-
   let i=p.hand.indexOf('Heal');
-  if(p.hp<Math.min(150,p.maxHp*.4)&&i>=0){ playUtility(room,p,[i]); return; }
+  if(p.hp<Math.min(150,p.maxHp*.4)&&i>=0){playUtility(room,p,[i]);return;}
+  if(!p.barrier){i=p.hand.findIndex(n=>BARRIERS[n]);if(i>=0){playUtility(room,p,[i]);return;}}
+  if(!p.monster){i=p.hand.findIndex(n=>MONSTERS[n]);if(i>=0){playUtility(room,p,[i]);return;}}
+  if(p.hp<180){i=p.hand.indexOf('Echo Shell');if(i>=0){playUtility(room,p,[i]);return;}}
 
-  if(!p.barrier){
-    i=p.hand.findIndex(n=>BARRIERS[n]);
-    if(i>=0){ playUtility(room,p,[i]); return; }
-  }
-
-  if(!p.monster){
-    i=p.hand.findIndex(n=>MONSTERS[n]);
-    if(i>=0){ playUtility(room,p,[i]); return; }
-  }
-
-  const targets=alivePlayers(room)
-    .filter(x=>x.id!==p.id)
-    .sort((a,b)=>(a.hp+(a.barrier?.hp||0))-(b.hp+(b.barrier?.hp||0)));
-
-  const target=targets[0];
-  if(!target) return;
-
+  const targets=alivePlayers(room).filter(x=>x.id!==p.id).sort((a,b)=>(a.hp+(a.barrier?.hp||0))-(b.hp+(b.barrier?.hp||0)));
+  const target=targets[0];if(!target) return;
   i=p.hand.findIndex(n=>CONFIGURED[n]&&!CONFIGURED[n].shell);
-  if(i>=0){ commitAttack(room,p,target,[i],true); return; }
-
-  const raw=aiAttackIndices(p);
-  if(raw){ commitAttack(room,p,target,raw,true); return; }
-
-  drawCards(room,p,3);
-  log(room,`${p.name} uses Draw Action (+3).`);
-  advanceTurn(room);
+  if(i>=0){commitAttack(room,p,target,[i],true);return;}
+  const raw=aiAttackIndices(p);if(raw){commitAttack(room,p,target,raw,true);return;}
+  const drawn=drawCards(room,p,3);
+  if(drawn){log(room,`${p.name} uses Draw Action (+${drawn}).`);endScheduledAction(room,p);}
+  else{log(room,`${p.name} passes with a full hand.`);endScheduledAction(room,p);}
 }
 
 function act(room,p,action,socket){
@@ -1232,45 +1017,31 @@ function act(room,p,action,socket){
   if(room.players[room.turnIndex]?.id!==p.id) return gameError(socket,'Not your scheduled turn.');
   if(!p.alive) return gameError(socket,'You are eliminated.');
 
-  if(action.type==='pass'){
-    log(room,`${p.name} passes.`);
-    advanceTurn(room);
-    return;
-  }
-
+  if(action.type==='pass'){log(room,`${p.name} passes.`);endScheduledAction(room,p);return;}
   if(action.type==='draw'){
-    drawCards(room,p,3);
-    log(room,`${p.name} uses Draw Action (+3).`);
-    advanceTurn(room);
-    return;
+    if(p.hand.length>=15) return gameError(socket,'Hand is full (15). Trade or play cards first.');
+    const drawn=drawCards(room,p,3);log(room,`${p.name} uses Draw Action (+${drawn}).`);endScheduledAction(room,p);return;
   }
-
   if(action.type==='trade'){
     const valid=validateIndices(p,action.indices);
-    if(!valid||![3,5].includes(valid.length)) return gameError(socket,'Trade exactly 3 or 5 selected cards.');
-
+    if(!valid||![3,5].includes(valid.length)) return gameError(socket,'Trade exactly 3 cards for 1, or 5 cards for 3.');
     const drawCount=valid.length===5?3:1;
-    consumeIndices(room,p,valid);
-    drawCards(room,p,drawCount);
-    log(room,`${p.name} trades ${valid.length} cards for ${drawCount}.`);
-    advanceTurn(room);
-    return;
+    consumeIndices(room,p,valid);const drawn=drawCards(room,p,drawCount);
+    log(room,`${p.name} trades ${valid.length} cards for ${drawn}.`);endScheduledAction(room,p);return;
   }
 
-  const valid=validateIndices(p,action.indices);
-  if(!valid) return gameError(socket,'Select card(s).');
+  const valid=validateIndices(p,action.indices);if(!valid) return gameError(socket,'Select card(s).');
+  const info=analyzeSelection(namesAt(p,valid));if(info.error) return gameError(socket,info.error);
 
-  const info=analyzeSelection(namesAt(p,valid));
-  if(info.error) return gameError(socket,info.error);
-
+  if(info.type==='RawBarrier'||(info.type==='Configured'&&info.name==='Echo Shell')||['Monster','Barrier','Support'].includes(info.type)){
+    if(!playUtility(room,p,valid)) gameError(socket,'Illegal Action.');return;
+  }
   if(['Raw','Configured'].includes(info.type)){
     const target=playerById(room,action.targetId);
     if(!target||!target.alive||target.id===p.id) return gameError(socket,'Choose a living opponent.');
-    if(!commitAttack(room,p,target,valid,true)) gameError(socket,'Illegal attack.');
-    return;
+    if(!commitAttack(room,p,target,valid,true)) gameError(socket,'Illegal attack.');return;
   }
-
-  if(!playUtility(room,p,valid)) gameError(socket,'Illegal Action.');
+  gameError(socket,'Illegal Action.');
 }
 
 function clearPending(room){
@@ -1307,6 +1078,8 @@ io.on('connection',(socket)=>{
       if(existing){
         existing.socketId=socket.id;
         existing.connected=true;
+        const timerKey=`${room.code}:${existing.id}`;
+        if(disconnectTimers.has(timerKey)){clearTimeout(disconnectTimers.get(timerKey));disconnectTimers.delete(timerKey);}
         socket.join(code);
         log(room,`${existing.name} reconnected.`);
         ack?.({ok:true,code,token:existing.token,playerId:existing.id,reconnected:true});
@@ -1431,13 +1204,13 @@ io.on('connection',(socket)=>{
   socket.on('loss_choice',(data)=>{
     const room=rooms.get(String(data?.code||'').toUpperCase());
     if(!room||room.pending?.kind!=='loss_choice'||!['cards','vitality'].includes(data?.choice)) return;
-
     const p=room.players.find(x=>x.socketId===socket.id);
     if(!p||p.id!==room.pending.playerId) return;
-
     const pending=room.pending;
+    const payload=data.choice==='cards'?{type:'cards',indices:data.indices}:{type:'vitality'};
     clearPending(room);
-    pending.resolve(data.choice);
+    const ok=pending.resolve(payload);
+    if(ok===false){room.pending=pending;room.phase='loss_choice';gameError(socket,'Select exactly 2 cards to return.');emitRoom(room);return;}
   });
 
   socket.on('replace_ai',(data)=>{
@@ -1450,16 +1223,18 @@ io.on('connection',(socket)=>{
     const p=playerById(room,data?.playerId);
     if(!p||p.isAI) return;
 
-    p.isAI=true;
-    p.connected=true;
-    p.socketId=null;
-    p.ready=true;
-    p.name=`AI ${p.name}`;
+    const timerKey=`${room.code}:${p.id}`;
+    if(disconnectTimers.has(timerKey)){clearTimeout(disconnectTimers.get(timerKey));disconnectTimers.delete(timerKey);}
+    p.isAI=true;p.connected=true;p.socketId=null;p.ready=true;p.name=`AI ${p.name}`;
     log(room,`${p.name} is now AI-controlled.`);
-
-    if(room.status==='playing'&&room.players[room.turnIndex]?.id===p.id&&!room.pending){
-      setTimeout(()=>aiTurn(room,p),150);
-    }
+    if(room.pending?.playerId===p.id){
+      const pending=room.pending;clearPending(room);
+      if(pending.kind==='counter'){
+        const idx=aiAttackIndices(p);if(idx) performCounter(room,p,playerById(room,pending.attackerId),idx,pending.after);else pending.after(null);
+      }else if(pending.kind==='roll'){
+        const roll=1+Math.floor(Math.random()*4);log(room,`${p.name} virtual d4 → ${roll}.`);pending.resolve(roll);
+      }
+    }else if(room.status==='playing'&&room.players[room.turnIndex]?.id===p.id){setTimeout(()=>aiTurn(room,p),150);}
     emitRoom(room);
   });
 
@@ -1487,7 +1262,9 @@ io.on('connection',(socket)=>{
         room.settings.disconnectMode==='autopass'
       ){
         log(room,`${p.name} auto-passes while offline.`);
-        advanceTurn(room);
+        endScheduledAction(room,p);
+      }else if(room.status==='playing'&&room.settings.disconnectMode==='grace'&&(room.players[room.turnIndex]?.id===p.id||room.pending?.playerId===p.id)){
+        scheduleGraceTimeout(room,p);
       }
 
       emitRoom(room);
@@ -1504,4 +1281,4 @@ setInterval(()=>{
   }
 },60_000);
 
-httpServer.listen(PORT,()=>console.log(`Echo Clash Online V0.4.1 listening on :${PORT}`));
+httpServer.listen(PORT,()=>console.log(`Echo Clash Online V0.4.2 listening on :${PORT}`));

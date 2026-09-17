@@ -1,15 +1,14 @@
 {
   "name": "echo-clash-online",
-  "version": "0.4.1-alpha",
+  "version": "0.4.2-alpha",
   "private": true,
+  "description": "Echo Clash Online multiplayer gameplay parity alpha",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js"
+    "test": "node tests/audit.js"
   },
-  "engines": {
-    "node": ">=20"
-  },
+  "engines": {"node": ">=20"},
   "dependencies": {
     "express": "^4.21.2",
     "socket.io": "^4.8.1"

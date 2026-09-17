@@ -3,473 +3,107 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Echo Clash Online V0.4.1</title>
+<title>Echo Clash Online V0.4.2</title>
 <style>
-:root{--bg:#0b0d12;--panel:#151922;--panel2:#202532;--line:#333a4d;--txt:#f4f5f8;--muted:#9ea6b8;--accent:#9b7bff;--good:#62d8a6;--bad:#ff7485;--warn:#ffc96b}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}button,input,select{font:inherit}button{border:0;border-radius:10px;padding:10px 14px;background:var(--accent);color:white;font-weight:800;cursor:pointer}button.secondary{background:#2a3040}button.ghost{background:transparent;border:1px solid var(--line)}button:disabled{opacity:.45;cursor:not-allowed}input,select{width:100%;padding:10px;background:#202532;color:white;border:1px solid var(--line);border-radius:9px}header{height:62px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-bottom:1px solid var(--line);background:#0c0e14d9;backdrop-filter:blur(12px);position:sticky;top:0;z-index:20}.brand{font-weight:900}.sub{font-size:11px;color:var(--muted)}main{max-width:1500px;margin:auto;padding:14px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px}.landing{max-width:820px;margin:24px auto}.tabs{display:flex;gap:8px;margin-bottom:12px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}label{display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--muted)}.hidden{display:none!important}.lobbyHead{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}.seats{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px;margin-top:12px}.seat,.pod{background:#1c202b;border:1px solid #363d50;border-radius:12px;padding:10px}.seat.host,.pod.active{outline:2px solid var(--accent)}.row{display:flex;align-items:center;justify-content:space-between;gap:8px}.badge{font-size:10px;background:#2a3040;padding:4px 7px;border-radius:999px;color:var(--muted)}.game{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:12px}.turnbar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:9px}.turn{font-size:10px;border:1px solid var(--line);background:#1b1f2a;border-radius:999px;padding:5px 8px;color:var(--muted)}.turn.on{background:#332a50;color:white;border-color:#6c59aa}.board{min-height:500px;background:radial-gradient(circle at center,#1d2230,#11141c 62%,#0e1016);border:1px solid var(--line);border-radius:18px;padding:12px}.opponents{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px}.pod{cursor:pointer}.pod.target{outline:2px solid var(--accent)}.pod.dead{opacity:.38}.hp{height:7px;background:#2c3140;border-radius:999px;overflow:hidden;margin:7px 0}.hp i{display:block;height:100%;background:linear-gradient(90deg,#62d8a6,#9b7bff)}.minis{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}.mini{background:#232837;border-radius:7px;padding:5px;font-size:9px;color:var(--muted)}.mini b{display:block;color:white;font-size:11px}.arena{max-width:720px;margin:24px auto;min-height:220px;border:1px dashed #3a4154;border-radius:18px;display:grid;place-items:center;text-align:center;padding:18px}.arena strong{font-size:18px}.self{display:grid;grid-template-columns:1.2fr .8fr .8fr;gap:8px}.slot{background:#1a1e28;border:1px solid var(--line);border-radius:12px;padding:10px}.handzone{margin-top:10px}.hand{display:flex;gap:8px;overflow-x:auto;padding:12px 2px}.card{flex:0 0 145px;min-height:155px;background:linear-gradient(180deg,#252b3b,#191d28);border:1px solid #3c445a;border-radius:12px;padding:10px;position:relative;cursor:pointer}.card.sel{transform:translateY(-6px);outline:2px solid var(--accent)}.card .kind{font-size:9px;text-transform:uppercase;color:var(--muted)}.card h4{font-size:13px;margin:9px 0 5px}.card p{font-size:10px;color:#c4c9d7;line-height:1.35}.actions{display:flex;gap:7px;flex-wrap:wrap;align-items:center}.side{display:flex;flex-direction:column;gap:10px}.log{background:#0f1218;border-radius:9px;padding:8px;max-height:300px;overflow:auto;font-size:10px;line-height:1.55;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}.pending{border-color:#6957a4}.choice{display:flex;gap:7px;flex-wrap:wrap}.notice{background:#211d31;border:1px solid #44385f;padding:9px 10px;border-radius:10px;font-size:11px;color:#ddd3ff;margin-bottom:9px}.error{position:fixed;right:16px;bottom:16px;background:#511f2a;color:white;border:1px solid #813346;border-radius:10px;padding:11px 13px;z-index:99;max-width:350px}.offlineNote{background:#2b2215;border:1px solid #6a5128;padding:10px;border-radius:10px;color:#ffd99d;margin:10px 0;font-size:11px}
-@media(max-width:980px){.game{grid-template-columns:1fr}.side{display:grid;grid-template-columns:1fr 1fr}.side .panel:last-child{grid-column:1/-1}}
-@media(max-width:680px){.grid2,.self{grid-template-columns:1fr}.opponents{display:flex;overflow-x:auto}.pod{flex:0 0 190px}.side{grid-template-columns:1fr}}
+:root{--bg:#0b0d12;--panel:#151922;--panel2:#202532;--line:#333a4d;--txt:#f4f5f8;--muted:#9ea6b8;--accent:#9b7bff;--good:#62d8a6;--bad:#ff7485;--warn:#ffc96b;--blue:#6ab8ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}button,input,select{font:inherit}button{border:0;border-radius:10px;padding:10px 14px;background:var(--accent);color:white;font-weight:800;cursor:pointer}button.secondary{background:#2a3040}button.ghost{background:transparent;border:1px solid var(--line)}button.danger{background:#612534}button:disabled{opacity:.4;cursor:not-allowed}input,select{width:100%;padding:10px;background:#202532;color:white;border:1px solid var(--line);border-radius:9px}header{height:62px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-bottom:1px solid var(--line);background:#0c0e14e8;backdrop-filter:blur(12px);position:sticky;top:0;z-index:20}.brand{font-weight:900}.sub{font-size:11px;color:var(--muted);line-height:1.45}main{max-width:1500px;margin:auto;padding:14px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px}.landing{max-width:820px;margin:24px auto}.tabs{display:flex;gap:8px;margin-bottom:12px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}label{display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--muted)}.hidden{display:none!important}.lobbyHead{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}.seats{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px;margin-top:12px}.seat,.pod{background:#1c202b;border:1px solid #363d50;border-radius:12px;padding:10px}.seat.host,.pod.active{outline:2px solid var(--accent)}.row{display:flex;align-items:center;justify-content:space-between;gap:8px}.badge{font-size:10px;background:#2a3040;padding:4px 7px;border-radius:999px;color:var(--muted)}.badge.good{color:var(--good)}.badge.warn{color:var(--warn)}.game{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:12px}.turnbar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:9px}.turn{font-size:10px;border:1px solid var(--line);background:#1b1f2a;border-radius:999px;padding:5px 8px;color:var(--muted)}.turn.on{background:#332a50;color:white;border-color:#6c59aa}.board{min-height:500px;background:radial-gradient(circle at center,#1d2230,#11141c 62%,#0e1016);border:1px solid var(--line);border-radius:18px;padding:12px}.opponents{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px}.pod{cursor:pointer;position:relative}.pod.target{outline:2px solid var(--accent)}.pod.area:after{content:'AREA';position:absolute;right:8px;bottom:8px;font-size:8px;color:var(--warn);border:1px solid #715c2f;padding:3px 5px;border-radius:999px}.pod.dead{opacity:.38}.hp{height:7px;background:#2c3140;border-radius:999px;overflow:hidden;margin:7px 0}.hp i{display:block;height:100%;background:linear-gradient(90deg,#62d8a6,#9b7bff)}.minis{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}.mini{background:#232837;border-radius:7px;padding:5px;font-size:9px;color:var(--muted)}.mini b{display:block;color:white;font-size:11px}.arena{max-width:760px;margin:22px auto;min-height:230px;border:1px dashed #3a4154;border-radius:18px;display:grid;place-items:center;text-align:center;padding:18px}.arena strong{font-size:19px}.self{display:grid;grid-template-columns:1.25fr .85fr .85fr .85fr;gap:8px}.slot{background:#1a1e28;border:1px solid var(--line);border-radius:12px;padding:10px}.handzone{margin-top:10px}.hand{display:flex;gap:8px;overflow-x:auto;padding:12px 2px 16px}.card{flex:0 0 185px;min-height:220px;background:linear-gradient(180deg,#252b3b,#191d28);border:1px solid #3c445a;border-radius:14px;padding:12px;position:relative;cursor:pointer;transition:.12s ease}.card:hover{transform:translateY(-2px)}.card.sel{transform:translateY(-8px);outline:2px solid var(--accent)}.card .kind{font-size:9px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted)}.card h4{font-size:15px;margin:10px 0 6px}.card .numbers{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px}.chip{background:#2b3141;border:1px solid #3b445b;border-radius:999px;padding:3px 6px;font-size:9px;color:#e4e7ef}.chip.oc{color:var(--warn)}.card ul{padding-left:15px;margin:7px 0 0;color:#c4c9d7;font-size:9px;line-height:1.38}.actions{display:flex;gap:7px;flex-wrap:wrap;align-items:center}.preview{background:#10131a;border:1px solid #343b4d;border-radius:12px;padding:11px;margin-bottom:10px;min-height:70px}.preview .big{font-size:16px;font-weight:900}.preview.stable{border-color:#315c4b}.preview.unstable{border-color:#7a6232}.preview.rupture{border-color:#7a3343}.side{display:flex;flex-direction:column;gap:10px}.log{background:#0f1218;border-radius:9px;padding:8px;max-height:340px;overflow:auto;font-size:10px;line-height:1.55;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}.notice{background:#211d31;border:1px solid #44385f;padding:9px 10px;border-radius:10px;font-size:11px;color:#ddd3ff;margin-bottom:9px}.error{position:fixed;right:16px;bottom:16px;background:#511f2a;color:white;border:1px solid #813346;border-radius:10px;padding:11px 13px;z-index:99;max-width:380px}.offlineNote{background:#2b2215;border:1px solid #6a5128;padding:10px;border-radius:10px;color:#ffd99d;margin:10px 0;font-size:11px}.decision{position:fixed;inset:0;background:#05060ac7;z-index:80;display:grid;place-items:center;padding:18px}.decisionCard{width:min(520px,100%);background:#171b25;border:1px solid #574a7c;border-radius:18px;padding:20px;box-shadow:0 24px 80px #000b}.decisionCard h2{margin:0 0 7px}.dice{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}.dice button{font-size:24px;min-height:70px}.selectedCount{color:var(--accent);font-weight:800}.hostAction{margin-top:7px;font-size:9px;padding:6px 8px}.statusline{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px}
+@media(max-width:1040px){.game{grid-template-columns:1fr}.side{display:grid;grid-template-columns:1fr 1fr}.side .panel:last-child{grid-column:1/-1}.self{grid-template-columns:1fr 1fr}}
+@media(max-width:680px){.grid2,.self{grid-template-columns:1fr}.opponents{display:flex;overflow-x:auto}.pod{flex:0 0 205px}.side{grid-template-columns:1fr}.card{flex-basis:168px}.actions button{flex:1}}
 </style>
 </head>
 <body>
-<header>
-  <div><div class="brand">⚔ Echo Clash Online</div><div class="sub">V0.4.1 Alpha • multiplayer area rules</div></div>
-  <button id="leave" class="ghost hidden">Leave</button>
-</header>
+<header><div><div class="brand">⚔ Echo Clash Online</div><div class="sub">V0.4.2 Gameplay Parity Alpha</div></div><button id="leave" class="ghost hidden">Leave</button></header>
 <main>
 <section id="landing" class="landing panel">
   <div class="tabs"><button id="tabCreate">Create Room</button><button id="tabJoin" class="secondary">Join Room</button></div>
-
-  <div id="offlineNote" class="offlineNote hidden">
-    Setup controls work in this preview, but Create/Join needs the Node server. Run <b>npm install</b> then <b>npm start</b>, or deploy the project.
-  </div>
-
+  <div id="offlineNote" class="offlineNote hidden">The interface preview works, but Create/Join needs the Node server.</div>
   <div id="createPane">
     <div class="grid2">
       <label>Your Name<input id="createName" value="Arvind"/></label>
-      <label>Total Seats
-        <select id="totalSeats">
-          <option value="2">2</option>
-          <option value="3">3</option>
-          <option value="4" selected>4</option>
-          <option value="5">5</option>
-          <option value="6">6</option>
-          <option value="7">7</option>
-          <option value="8">8</option>
-        </select>
-      </label>
-      <label>AI Seats
-        <select id="aiSeats">
-          <option value="0">0</option>
-          <option value="1">1</option>
-          <option value="2">2</option>
-          <option value="3" selected>3</option>
-        </select>
-      </label>
-      <label>Dice Mode
-        <select id="diceMode">
-          <option value="virtual">Virtual d4</option>
-          <option value="physical">Physical d4</option>
-        </select>
-      </label>
-      <label>Disconnect Rule
-        <select id="disconnectMode">
-          <option value="autopass">Auto-pass disconnected turns</option>
-          <option value="grace">5-minute reconnect grace</option>
-        </select>
-      </label>
+      <label>Total Seats<select id="totalSeats"><option>2</option><option>3</option><option selected>4</option><option>5</option><option>6</option><option>7</option><option>8</option></select></label>
+      <label>AI Seats<select id="aiSeats"></select></label>
+      <label>Dice Mode<select id="diceMode"><option value="virtual">Virtual d4</option><option value="physical">Physical d4</option></select></label>
+      <label>Disconnect Rule<select id="disconnectMode"><option value="autopass">Auto-pass disconnected turns</option><option value="grace">5-minute reconnect grace</option></select></label>
     </div>
-
-    <p class="sub">Deck count scales automatically: 2–3 players = 1 deck, 4–6 = 2 decks, 7–8 = 3 decks.</p>
-    <div id="seatPreview" class="sub" style="margin:10px 0"></div>
-    <button id="createBtn">Create Room</button>
+    <p class="sub">2–3 Players = 1 deck • 4–6 = 2 decks • 7–8 = 3 decks. Starting hand 12, hand cap 15.</p>
+    <div id="seatPreview" class="sub" style="margin:10px 0"></div><button id="createBtn">Create Room</button>
   </div>
-
-  <div id="joinPane" class="hidden">
-    <div class="grid2">
-      <label>Your Name<input id="joinName"/></label>
-      <label>Room Code<input id="joinCode" maxlength="6"/></label>
-    </div>
-    <button id="joinBtn" style="margin-top:10px">Join Room</button>
-  </div>
+  <div id="joinPane" class="hidden"><div class="grid2"><label>Your Name<input id="joinName"/></label><label>Room Code<input id="joinCode" maxlength="6"/></label></div><button id="joinBtn" style="margin-top:10px">Join Room</button></div>
 </section>
 
 <section id="lobby" class="panel hidden">
-  <div class="lobbyHead">
-    <div><h2 style="margin:0">Room <span id="roomCode"></span></h2><div class="sub" id="lobbyMeta"></div></div>
-    <div class="actions">
-      <button id="copyLink" class="secondary">Copy Invite Link</button>
-      <button id="readyBtn" class="secondary">Ready</button>
-      <button id="startBtn">Start Match</button>
-    </div>
-  </div>
+  <div class="lobbyHead"><div><h2 style="margin:0">Room <span id="roomCode"></span></h2><div class="sub" id="lobbyMeta"></div></div><div class="actions"><button id="copyLink" class="secondary">Copy Invite Link</button><button id="readyBtn" class="secondary">Ready</button><button id="startBtn">Start Match</button></div></div>
   <div id="seats" class="seats"></div>
 </section>
 
 <section id="game" class="hidden">
-  <div id="notice" class="notice"></div>
-  <div id="turnbar" class="turnbar"></div>
-
+  <div id="notice" class="notice"></div><div id="turnbar" class="turnbar"></div>
   <div class="game">
     <div>
       <div class="board">
         <div id="opponents" class="opponents"></div>
-        <div id="arena" class="arena">
-          <div><strong>Shared Battlefield</strong><div class="sub">Primary Counter → area side lanes → defenses → Monster follow-up</div></div>
-        </div>
-
+        <div id="arena" class="arena"><div><strong>Shared Battlefield</strong><div class="sub">Scheduled Action → Primary Counter → area lanes → defenses → Monster follow-up → elimination check</div></div></div>
         <div class="self">
           <div class="slot"><b>Your Field</b><div id="selfStats" class="sub" style="margin-top:8px"></div></div>
           <div class="slot"><b>🐉 Monster</b><div id="selfMonster" class="sub" style="margin-top:8px">Empty</div></div>
           <div class="slot"><b>🛡 Barrier</b><div id="selfBarrier" class="sub" style="margin-top:8px">Empty</div></div>
+          <div class="slot"><b>◈ Echo Shell</b><div id="selfShell" class="sub" style="margin-top:8px">Empty</div></div>
         </div>
       </div>
-
       <div class="panel handzone">
-        <div class="row"><b>Your Hand</b><span id="handCount" class="sub"></span></div>
+        <div class="row"><b>Your Hand</b><span><span id="selectedCount" class="selectedCount">0 selected</span> • <span id="handCount" class="sub"></span></span></div>
         <div id="hand" class="hand"></div>
-        <div class="actions">
-          <button id="playBtn">Play / Attack</button>
-          <button id="drawBtn" class="secondary">Draw +3</button>
-          <button id="tradeBtn" class="secondary">Trade Selected</button>
-          <button id="passBtn" class="secondary">Pass</button>
-          <span class="sub">Primary Target: <b id="targetName">None</b></span>
-        </div>
+        <div id="preview" class="preview"><div class="sub">Select cards to preview the Action.</div></div>
+        <div class="actions"><button id="playBtn">Play / Attack</button><button id="drawBtn" class="secondary">Draw +3</button><button id="tradeBtn" class="secondary">Trade Selected</button><button id="passBtn" class="secondary">Pass</button><button id="resolveBtn" class="ghost hidden">Resolve Pending Decision</button><span class="sub">Primary Target: <b id="targetName">None</b></span></div>
       </div>
     </div>
-
-    <aside class="side">
-      <div id="pendingPanel" class="panel pending hidden">
-        <h3 style="margin-top:0">Resolution</h3>
-        <div id="pendingText" class="sub"></div>
-        <div id="pendingControls" class="choice" style="margin-top:10px"></div>
-      </div>
-
-      <div class="panel"><h3 style="margin-top:0">Match</h3><div id="matchInfo" class="sub"></div></div>
-      <div class="panel"><h3 style="margin-top:0">Battle Log</h3><div id="log" class="log"></div></div>
-    </aside>
+    <aside class="side"><div class="panel"><h3 style="margin-top:0">Match</h3><div id="matchInfo" class="sub"></div></div><div class="panel"><h3 style="margin-top:0">Battle Log</h3><div id="log" class="log"></div></div></aside>
   </div>
 </section>
 </main>
 
+<div id="decision" class="decision hidden"><div class="decisionCard"><div class="badge warn">RESOLUTION WAITING</div><h2 id="decisionTitle">Decision</h2><div id="decisionText" class="sub"></div><div id="decisionControls" class="actions" style="margin-top:14px"></div></div></div>
 <div id="error" class="error hidden"></div>
-
 <script src="/socket.io/socket.io.js"></script>
 <script>
 const $=id=>document.getElementById(id);
+const socket=(typeof io==='function')?io():null;
+let state=null,room=null,token=null,meId=null,selected=[],targetId=null,ready=false,cards={},decisionDismissedKey=null;
 
-// Important: initialize the setup UI even if Socket.IO is unavailable.
-// This is what fixes Total Seats / AI Seats in the standalone preview.
-const socket = (typeof io==='function') ? io() : null;
+fetch('/api/cards').then(r=>r.ok?r.json():{}).then(x=>{cards=x||{};if(state)render()}).catch(()=>{});
+function error(message){$('error').textContent=message;$('error').classList.remove('hidden');setTimeout(()=>$('error').classList.add('hidden'),3500)}
+function show(which){['landing','lobby','game'].forEach(id=>$(id).classList.toggle('hidden',id!==which));$('leave').classList.toggle('hidden',which==='landing')}
+function saveSession(){if(room&&token)localStorage.setItem('echo_clash_session',JSON.stringify({room,token,meId}))}
+function me(){return state?.players.find(p=>p.id===meId)}
+function isMyTurn(){return state?.status==='playing'&&state.turnPlayerId===meId&&state.phase==='action'&&!state.pending&&me()?.alive}
+function refreshAI(){const n=+$('totalSeats').value,old=+$('aiSeats').value||0;$('aiSeats').innerHTML='';for(let i=0;i<n;i++)$('aiSeats').add(new Option(i,i));$('aiSeats').value=Math.min(old||n-1,n-1);seatPreview()}
+function seatPreview(){const n=+$('totalSeats').value,a=+$('aiSeats').value,out=['P1 You'];for(let i=1;i<n;i++)out.push(i<=a?`P${i+1} AI ${i}`:`P${i+1} Human`);$('seatPreview').textContent='Seats: '+out.join(' • ')}
+$('totalSeats').onchange=refreshAI;$('aiSeats').onchange=seatPreview;refreshAI();if(!socket)$('offlineNote').classList.remove('hidden');
+$('tabCreate').onclick=()=>{$('createPane').classList.remove('hidden');$('joinPane').classList.add('hidden')};$('tabJoin').onclick=()=>{$('joinPane').classList.remove('hidden');$('createPane').classList.add('hidden')};
+$('createBtn').onclick=()=>{if(!socket)return error('Online server is not connected.');socket.emit('create_room',{name:$('createName').value,totalSeats:+$('totalSeats').value,aiSeats:+$('aiSeats').value,diceMode:$('diceMode').value,disconnectMode:$('disconnectMode').value},res=>{if(!res.ok)return error(res.error);room=res.code;token=res.token;meId=res.playerId;saveSession();history.replaceState({},'',`/?room=${room}`);show('lobby')})};
+function joinRoom(code,name,storedToken=null){if(!socket)return error('Online server is not connected.');socket.emit('join_room',{code,name,token:storedToken},res=>{if(!res.ok)return error(res.error);room=res.code;token=res.token;meId=res.playerId;saveSession();history.replaceState({},'',`/?room=${room}`);show('lobby')})}
+$('joinBtn').onclick=()=>joinRoom($('joinCode').value,$('joinName').value);$('readyBtn').onclick=()=>{ready=!ready;socket?.emit('ready',{code:room,ready})};$('startBtn').onclick=()=>socket?.emit('start_game',{code:room});$('copyLink').onclick=async()=>{await navigator.clipboard.writeText(`${location.origin}/?room=${room}`);$('copyLink').textContent='Copied';setTimeout(()=>$('copyLink').textContent='Copy Invite Link',1000)};$('leave').onclick=()=>{localStorage.removeItem('echo_clash_session');location.href='/'};
+function emitAction(action){socket?.emit('act',{code:room,action})}$('drawBtn').onclick=()=>emitAction({type:'draw'});$('passBtn').onclick=()=>emitAction({type:'pass'});$('tradeBtn').onclick=()=>emitAction({type:'trade',indices:[...selected]});$('playBtn').onclick=()=>emitAction({type:'play',indices:[...selected],targetId});$('resolveBtn').onclick=()=>{decisionDismissedKey=null;renderDecision()};
+if(socket){socket.on('game_error',x=>error(x.message));socket.on('state',s=>{const oldHand=me()?.hand?.join('|');const oldPending=state?.pending?`${state.pending.kind}:${state.pending.playerId}:${state.pending.label||''}`:null;state=s;room=s.code;const newPending=state?.pending?`${state.pending.kind}:${state.pending.playerId}:${state.pending.label||''}`:null;if(oldPending!==newPending)decisionDismissedKey=null;const newHand=me()?.hand?.join('|');if(oldHand!==newHand)selected=[];if(!targetId||!state.players.find(p=>p.id===targetId&&p.alive)){targetId=state.players.find(p=>p.id!==meId&&p.alive)?.id||null}saveSession();render()})}
 
-let state=null, room=null, token=null, meId=null, selected=[], targetId=null, ready=false;
+function render(){if(!state)return;if(state.status==='lobby'){show('lobby');renderLobby();return}show('game');renderGame()}
+function renderLobby(){$('roomCode').textContent=state.code;$('lobbyMeta').textContent=`${state.settings.totalSeats} seats • ${state.settings.aiSeats} AI • ${state.settings.diceMode} d4 • ${Math.ceil(state.settings.totalSeats/3)} deck(s)`;$('seats').innerHTML='';state.players.forEach((p,i)=>{const d=document.createElement('div');d.className='seat'+(p.id===state.hostId?' host':'');d.innerHTML=`<div class="row"><b>P${i+1} • ${p.name}</b><span class="badge ${p.connected?'good':'warn'}">${p.isAI?'AI':p.connected?'Online':'Offline'}</span></div><div class="sub" style="margin-top:7px">${p.id===state.hostId?'Host • ':''}${p.ready?'Ready':'Not ready'}</div>`;$('seats').appendChild(d)});$('readyBtn').textContent=me()?.ready?'Unready':'Ready';$('startBtn').style.display=state.viewerId===state.hostId?'':'none'}
 
-const cardMeta=n=>{
-  if(['Fire','Water','Earth','Air','Ice','Lightning','Acid'].includes(n))return['Essence','Raw Essence'];
-  if(['Projectile','Wave','Blade','Burst','Bind','Coat'].includes(n))return['Form','Raw Form'];
-  if(['Compression','Acceleration','Amplifier','Explosion'].includes(n))return['Force','Raw Force'];
-  if(n.includes('Barrier'))return['Barrier','Defense'];
-  if(['Ashfang','Stoneback','Stormclaw','Rotcrawler','Emberhide','Shardling'].includes(n))return['Monster','Summon'];
-  if(['Heal','Stability Boost','Output Boost','Cleanse','Monster Heal','Stabilize'].includes(n))return['Support','Support'];
-  return['Configured','Configured attack'];
-};
+function cardNumbers(m){const a=[];if(m.damage!=null)a.push(`D${m.damage}`);if(m.hp!=null)a.push(`HP ${m.hp}`);if(m.attack!=null)a.push(`ATK ${m.attack}`);if(m.guard!=null)a.push(`Guard ${Math.round(m.guard*100)}%`);if(m.multiplier!=null)a.push(`×${m.multiplier}`);if(m.oc!=null)a.push(`OC ${m.oc}`);return a}
+function cardHTML(name){const m=cards[name]||{type:'Card',rules:[]};return `<div class="kind">${m.type||'Card'}</div><h4>${name}</h4><div class="numbers">${cardNumbers(m).map((x,i)=>`<span class="chip ${x.startsWith('OC')?'oc':''}">${x}</span>`).join('')}</div>${m.rules?.length?`<ul>${m.rules.slice(0,4).map(r=>`<li>${r}</li>`).join('')}</ul>`:''}`}
+function selectedNames(){const h=me()?.hand||[];return selected.map(i=>h[i]).filter(Boolean)}
+function rawPreview(names){const ess=names.filter(n=>cards[n]?.type==='Essence'),form=names.find(n=>cards[n]?.type==='Form'&&n!=='Barrier Form'),forces=names.filter(n=>cards[n]?.type==='Force');if(names.includes('Barrier Form')){if(!ess.length)return{bad:'Barrier Form needs at least one Essence.'};if(names.some(n=>n!=='Barrier Form'&&!ess.includes(n)))return{bad:'Barrier Form combines with Essence cards only.'};let hp=80+ess.reduce((s,n)=>s+(cards[n]?.damage||0),0);if(ess.includes('Fire')&&ess.includes('Air'))hp*=1.1;if(ess.includes('Lightning')&&ess.includes('Air'))hp*=1.1;if(ess.includes('Earth'))hp*=1.2;return{kind:'Raw Barrier',value:Math.round(hp/5)*5,oc:1+ess.reduce((s,n)=>s+(cards[n]?.oc||0),0),label:names.join(' + '),barrier:true}}if(!ess.length)return{bad:'A Raw Configuration needs at least one Essence.'};if(names.filter(n=>cards[n]?.type==='Form').length>1)return{bad:'Only one Form per Raw Configuration.'};let d=ess.reduce((s,n)=>s+(cards[n]?.damage||0),0)+(form?cards[form].damage||0:0);if(ess.includes('Fire')&&ess.includes('Air'))d*=1.1;if(ess.includes('Lightning')&&ess.includes('Air'))d*=1.1;for(const f of forces)d*=cards[f]?.multiplier||1;return{kind:'Raw Configuration',value:Math.round(d/5)*5,oc:names.reduce((s,n)=>s+(cards[n]?.oc||0),0),label:names.join(' + ')}}
+function classifySelected(){const names=selectedNames();if(!names.length)return{empty:true};const ms=names.map(n=>cards[n]||{});if(names.includes('Barrier Form')||ms.every(m=>['Essence','Form','Force'].includes(m.type)))return rawPreview(names);if(names.length!==1)return{bad:'Monster, Barrier, Support and Configured cards are played individually.'};const m=ms[0],name=names[0];if(m.type==='Configured')return{kind:name==='Echo Shell'?'Echo Shell':'Configured',value:m.damage,oc:m.oc,label:name,needsTarget:name!=='Echo Shell'};if(m.type==='Barrier')return{kind:'Barrier',value:m.hp,oc:m.oc,label:name,barrier:true};if(m.type==='Monster')return{kind:'Monster',label:name};if(m.type==='Support')return{kind:'Support',label:name};return{bad:'Illegal selection.'}}
+function stabilityClass(info){if(info.oc==null)return'';const p=me();if(info.oc>p.effectiveOutput)return'rupture';if(info.oc>p.effectiveStability)return'unstable';return'stable'}
+function isAreaSelected(){const names=selectedNames();if(names.includes('Wave'))return true;if(names.length===1&&['Lightning Arc','Corrosive Surge','Ricochet Arrow'].includes(names[0]))return true;if(names.length===1&&names[0]==='Thunder Burst')return true;return false}
+function areaVictimIds(){if(!state||!targetId||!isAreaSelected())return new Set();const i=state.players.findIndex(p=>p.id===targetId),n=state.players.length;if(i<0)return new Set();return new Set([(i-1+n)%n,i,(i+1)%n].map(j=>state.players[j]).filter(p=>p&&p.alive&&p.id!==meId).map(p=>p.id))}
 
-function error(message){
-  $('error').textContent=message;
-  $('error').classList.remove('hidden');
-  setTimeout(()=>$('error').classList.add('hidden'),3200);
-}
-
-function show(which){
-  ['landing','lobby','game'].forEach(id=>$(id).classList.toggle('hidden',id!==which));
-  $('leave').classList.toggle('hidden',which==='landing');
-}
-
-function saveSession(){
-  if(room&&token) localStorage.setItem('echo_clash_session',JSON.stringify({room,token,meId}));
-}
-function me(){ return state?.players.find(p=>p.id===meId); }
-function isMyTurn(){
-  return state?.status==='playing' &&
-    state.turnPlayerId===meId &&
-    state.phase==='action' &&
-    !state.pending &&
-    me()?.alive;
-}
-
-function refreshAIOptions(){
-  const total=Number($('totalSeats').value);
-  const previous=Number($('aiSeats').value)||0;
-  $('aiSeats').innerHTML='';
-
-  for(let i=0;i<total;i++){
-    const o=document.createElement('option');
-    o.value=String(i);
-    o.textContent=String(i);
-    $('aiSeats').appendChild(o);
-  }
-
-  $('aiSeats').value=String(Math.min(previous,total-1));
-  renderSeatPreview();
-}
-
-function renderSeatPreview(){
-  const total=Number($('totalSeats').value);
-  const ai=Number($('aiSeats').value);
-  const seats=['P1 You'];
-  for(let i=1;i<total;i++) seats.push(i<=ai?`P${i+1} AI ${i}`:`P${i+1} Human`);
-  $('seatPreview').textContent='Seats: '+seats.join(' • ');
-}
-
-$('totalSeats').addEventListener('change',refreshAIOptions);
-$('aiSeats').addEventListener('change',renderSeatPreview);
-refreshAIOptions();
-
-if(!socket){
-  $('offlineNote').classList.remove('hidden');
-}
-
-$('tabCreate').onclick=()=>{
-  $('createPane').classList.remove('hidden');
-  $('joinPane').classList.add('hidden');
-};
-$('tabJoin').onclick=()=>{
-  $('joinPane').classList.remove('hidden');
-  $('createPane').classList.add('hidden');
-};
-
-$('createBtn').onclick=()=>{
-  if(!socket) return error('Online server is not connected. Run or deploy the Node project first.');
-
-  socket.emit('create_room',{
-    name:$('createName').value,
-    totalSeats:+$('totalSeats').value,
-    aiSeats:+$('aiSeats').value,
-    diceMode:$('diceMode').value,
-    disconnectMode:$('disconnectMode').value,
-  },res=>{
-    if(!res.ok) return error(res.error);
-    room=res.code;token=res.token;meId=res.playerId;
-    saveSession();
-    history.replaceState({},'',`/?room=${room}`);
-    show('lobby');
-  });
-};
-
-function joinRoom(code,name,storedToken=null){
-  if(!socket) return error('Online server is not connected.');
-
-  socket.emit('join_room',{code,name,token:storedToken},res=>{
-    if(!res.ok) return error(res.error);
-    room=res.code;token=res.token;meId=res.playerId;
-    saveSession();
-    history.replaceState({},'',`/?room=${room}`);
-    show('lobby');
-  });
-}
-
-$('joinBtn').onclick=()=>joinRoom($('joinCode').value,$('joinName').value);
-$('readyBtn').onclick=()=>{
-  if(!socket)return;
-  ready=!ready;
-  socket.emit('ready',{code:room,ready});
-};
-$('startBtn').onclick=()=>socket&&socket.emit('start_game',{code:room});
-$('copyLink').onclick=async()=>{
-  await navigator.clipboard.writeText(`${location.origin}/?room=${room}`);
-  $('copyLink').textContent='Copied';
-  setTimeout(()=>$('copyLink').textContent='Copy Invite Link',1000);
-};
-$('leave').onclick=()=>{
-  localStorage.removeItem('echo_clash_session');
-  location.href='/';
-};
-
-function emitAction(action){
-  if(socket) socket.emit('act',{code:room,action});
-}
-$('drawBtn').onclick=()=>emitAction({type:'draw'});
-$('passBtn').onclick=()=>emitAction({type:'pass'});
-$('tradeBtn').onclick=()=>emitAction({type:'trade',indices:[...selected]});
-$('playBtn').onclick=()=>emitAction({type:'play',indices:[...selected],targetId});
-
-if(socket){
-  socket.on('game_error',x=>error(x.message));
-  socket.on('state',s=>{
-    state=s;room=s.code;selected=[];
-    saveSession();
-    render();
-  });
-}
-
-function render(){
-  if(!state)return;
-  if(state.status==='lobby'){show('lobby');renderLobby();return;}
-  show('game');renderGame();
-}
-
-function renderLobby(){
-  $('roomCode').textContent=state.code;
-  $('lobbyMeta').textContent=
-    `${state.settings.totalSeats} seats • ${state.settings.aiSeats} AI • `+
-    `${state.settings.diceMode} d4 • ${Math.ceil(state.settings.totalSeats/3)} deck(s)`;
-
-  $('seats').innerHTML='';
-  state.players.forEach((p,i)=>{
-    const d=document.createElement('div');
-    d.className='seat'+(p.id===state.hostId?' host':'');
-    d.innerHTML=
-      `<div class="row"><b>P${i+1} • ${p.name}</b>`+
-      `<span class="badge">${p.isAI?'AI':p.connected?'Online':'Offline'}</span></div>`+
-      `<div class="sub" style="margin-top:6px">${p.id===state.hostId?'Host • ':''}${p.ready?'Ready':'Not ready'}</div>`;
-    $('seats').appendChild(d);
-  });
-
-  $('readyBtn').textContent=me()?.ready?'Unready':'Ready';
-  $('startBtn').style.display=state.viewerId===state.hostId?'':'none';
-}
-
-function renderGame(){
-  const mine=me();
-  const current=state.players.find(p=>p.id===state.turnPlayerId);
-
-  $('notice').textContent=
-    state.status==='ended'?'Match finished.':
-    state.pending?`${state.phase}: waiting for ${state.players.find(p=>p.id===state.pending.playerId)?.name||'player'}`:
-    isMyTurn()?'Your scheduled Action.':
-    `${current?.name||'Player'}'s turn.`;
-
-  $('turnbar').innerHTML='';
-  state.players.forEach((p,i)=>{
-    const x=document.createElement('span');
-    x.className='turn'+(p.id===state.turnPlayerId?' on':'');
-    x.textContent=`P${i+1} ${p.name}`;
-    $('turnbar').appendChild(x);
-  });
-
-  $('opponents').innerHTML='';
-  state.players.filter(p=>p.id!==meId).forEach(p=>{
-    const d=document.createElement('div');
-    d.className='pod'+(p.id===targetId?' target':'')+(!p.alive?' dead':'');
-    d.innerHTML=
-      `<div class="row"><b>${p.name}</b><span class="badge">${p.isAI?'AI':p.connected?'Online':'Offline'}</span></div>`+
-      `<div class="hp"><i style="width:${Math.max(0,p.hp/p.maxHp*100)}%"></i></div>`+
-      `<div class="minis"><div class="mini">HP<b>${p.hp}/${p.maxHp}</b></div>`+
-      `<div class="mini">Cards<b>${p.handCount}</b></div>`+
-      `<div class="mini">Strain<b>${p.ruptureStrain}/2</b></div></div>`+
-      `<div class="sub" style="margin-top:6px">🐉 ${p.monster?p.monster.name:'None'} • 🛡 ${p.barrier?p.barrier.name:'None'}</div>`;
-    d.onclick=()=>{if(p.alive){targetId=p.id;renderGame();}};
-    $('opponents').appendChild(d);
-  });
-
-  $('selfStats').innerHTML=
-    `HP <b>${mine.hp}/${mine.maxHp}</b> • Output <b>${mine.effectiveOutput}</b> • Stability <b>${mine.effectiveStability}</b><br>`+
-    `Strikes <b>${mine.strikes}/5</b> • Loss streak <b>${mine.lossStreak}/3</b> • Rupture <b>${mine.ruptureStrain}/2</b>`;
-
-  $('selfMonster').textContent=mine.monster?`${mine.monster.name} • HP ${mine.monster.hp}`:'Empty';
-  $('selfBarrier').textContent=mine.barrier?`${mine.barrier.name} • HP ${mine.barrier.hp}`:'Empty';
-
-  $('hand').innerHTML='';
-  (mine.hand||[]).forEach((name,i)=>{
-    const m=cardMeta(name);
-    const c=document.createElement('div');
-    c.className='card'+(selected.includes(i)?' sel':'');
-    c.innerHTML=`<div class="kind">${m[0]}</div><h4>${name}</h4><div class="sub">${m[1]}</div>`;
-    c.onclick=()=>{
-      const k=selected.indexOf(i);
-      if(k>=0)selected.splice(k,1);else selected.push(i);
-      renderGame();
-    };
-    $('hand').appendChild(c);
-  });
-
-  $('handCount').textContent=`${mine.handCount} cards`;
-  $('targetName').textContent=state.players.find(p=>p.id===targetId)?.name||'None';
-
-  ['playBtn','drawBtn','tradeBtn','passBtn'].forEach(id=>$(id).disabled=!isMyTurn());
-
-  $('arena').innerHTML=state.tieBreaker
-    ?'<div><b>⚔ TIE BREAKER</b><div class="sub">Tied players return at 20 HP.</div></div>'
-    :'<div><b>Shared Battlefield</b><div class="sub">Area: primary target + adjacent seats. Only primary can Counter.</div></div>';
-
-  $('matchInfo').innerHTML=
-    `Room <b>${state.code}</b><br>Round <b>${state.round}</b><br>`+
-    `Dice <b>${state.settings.diceMode}</b><br>Deck <b>${state.deckCount}</b> • Recycle <b>${state.recycleCount}</b>`;
-
-  $('log').innerHTML='';
-  [...state.log].reverse().forEach(x=>{
-    const d=document.createElement('div');
-    d.textContent=x.text;
-    $('log').appendChild(d);
-  });
-
-  renderPending();
-}
-
-function renderPending(){
-  const p=state.pending;
-  const box=$('pendingPanel');
-  const controls=$('pendingControls');
-
-  if(!p){box.classList.add('hidden');return;}
-
-  box.classList.remove('hidden');
-  controls.innerHTML='';
-  $('pendingText').textContent=p.label||p.kind;
-
-  if(p.playerId!==meId)return;
-
-  if(p.kind==='roll'){
-    if(p.diceMode==='virtual'){
-      const b=document.createElement('button');
-      b.textContent='Roll Virtual d4';
-      b.onclick=()=>socket.emit('roll',{code:room});
-      controls.appendChild(b);
-    }else{
-      [1,2,3,4].forEach(n=>{
-        const b=document.createElement('button');
-        b.textContent=n;
-        b.className='secondary';
-        b.onclick=()=>socket.emit('roll',{code:room,roll:n});
-        controls.appendChild(b);
-      });
-    }
-  }
-
-  if(p.kind==='counter'){
-    const note=document.createElement('div');
-    note.className='sub';
-    note.textContent='You are the primary target. Side players never receive a Counter prompt.';
-    controls.appendChild(note);
-
-    const b=document.createElement('button');
-    b.textContent='Counter with Selected';
-    b.onclick=()=>socket.emit('counter',{code:room,indices:[...selected]});
-    controls.appendChild(b);
-
-    const d=document.createElement('button');
-    d.textContent='Decline';
-    d.className='secondary';
-    d.onclick=()=>socket.emit('counter',{code:room,decline:true});
-    controls.appendChild(d);
-  }
-
-  if(p.kind==='state_choice'){
-    [['v','Vitality +50'],['o','Output +1'],['s','Stability +1']].forEach(([pick,label])=>{
-      const b=document.createElement('button');
-      b.textContent=label;
-      b.onclick=()=>socket.emit('state_choice',{code:room,pick});
-      controls.appendChild(b);
-    });
-  }
-
-  if(p.kind==='loss_choice'){
-    const a=document.createElement('button');
-    a.textContent='Return 2 Cards';
-    a.onclick=()=>socket.emit('loss_choice',{code:room,choice:'cards'});
-    controls.appendChild(a);
-
-    const b=document.createElement('button');
-    b.textContent='Sacrifice Vitality';
-    b.className='secondary';
-    b.onclick=()=>socket.emit('loss_choice',{code:room,choice:'vitality'});
-    controls.appendChild(b);
-  }
-}
-
-const qs=new URLSearchParams(location.search);
-const requestedRoom=qs.get('room');
-const saved=JSON.parse(localStorage.getItem('echo_clash_session')||'null');
-
-if(requestedRoom){
-  $('tabJoin').click();
-  $('joinCode').value=requestedRoom.toUpperCase();
-  if(socket&&saved&&saved.room===requestedRoom.toUpperCase()){
-    joinRoom(requestedRoom,'',saved.token);
-  }
-}else if(socket&&saved?.room){
-  joinRoom(saved.room,'',saved.token);
-}
+function renderGame(){const mine=me(),current=state.players.find(p=>p.id===state.turnPlayerId),areaIds=areaVictimIds();$('notice').textContent=state.status==='ended'?'Match finished.':state.pending?`${state.phase}: waiting for ${state.players.find(p=>p.id===state.pending.playerId)?.name||'player'}`:isMyTurn()?'Your scheduled Action. Choose one Action.':`${current?.name||'Player'}'s scheduled turn.`;$('turnbar').innerHTML='';state.players.forEach((p,i)=>{const x=document.createElement('span');x.className='turn'+(p.id===state.turnPlayerId?' on':'');x.textContent=`P${i+1} ${p.name}`;$('turnbar').appendChild(x)});$('opponents').innerHTML='';state.players.filter(p=>p.id!==meId).forEach(p=>{const d=document.createElement('div');d.className='pod'+(p.id===targetId?' target':'')+(areaIds.has(p.id)&&p.id!==targetId?' area':'')+(!p.alive?' dead':'');d.innerHTML=`<div class="row"><b>${p.name}</b><span class="badge ${p.connected?'good':'warn'}">${p.isAI?'AI':p.connected?'Online':'Offline'}</span></div><div class="hp"><i style="width:${Math.max(0,p.hp/p.maxHp*100)}%"></i></div><div class="minis"><div class="mini">HP<b>${p.hp}/${p.maxHp}</b></div><div class="mini">Cards<b>${p.handCount}</b></div><div class="mini">Strain<b>${p.ruptureStrain}/2</b></div></div><div class="sub" style="margin-top:7px">🐉 ${p.monster?p.monster.name:'None'} • 🛡 ${p.barrier?p.barrier.name:'None'} • ◈ ${p.shell?`Shell ${p.shell.hp}`:'No Shell'}</div>`;d.onclick=()=>{if(p.alive){targetId=p.id;renderGame()}};if(state.viewerId===state.hostId&&!p.isAI&&!p.connected){const b=document.createElement('button');b.className='secondary hostAction';b.textContent='Replace with AI';b.onclick=e=>{e.stopPropagation();socket.emit('replace_ai',{code:room,playerId:p.id})};d.appendChild(b)}$('opponents').appendChild(d)});
+$('selfStats').innerHTML=`HP <b>${mine.hp}/${mine.maxHp}</b> • Output <b>${mine.effectiveOutput}</b> • Stability <b>${mine.effectiveStability}</b><br>Strikes <b>${mine.strikes}/5</b> • Consecutive Losses <b>${mine.lossStreak}/3</b> • Rupture <b>${mine.ruptureStrain}/2</b><div class="statusline">${mine.skipTurns?'<span class="badge warn">Stunned/Frozen</span>':''}${mine.lingering?.map(e=>`<span class="badge">${e.kind} ${e.turns}</span>`).join('')||''}</div>`;$('selfMonster').innerHTML=mine.monster?`<b>${mine.monster.name}</b><br>HP ${mine.monster.hp}${mine.monster.charge?'<br>Charge 1':''}`:'Empty';$('selfBarrier').innerHTML=mine.barrier?`<b>${mine.barrier.name}</b><br>HP ${mine.barrier.hp}`:'Empty';$('selfShell').innerHTML=mine.shell?`<b>D${mine.shell.hp}</b> temporary HP<br>Expires at start of your next scheduled Action.`:'Empty';
+$('hand').innerHTML='';(mine.hand||[]).forEach((name,i)=>{const c=document.createElement('div');c.className='card'+(selected.includes(i)?' sel':'');c.innerHTML=cardHTML(name);c.onclick=()=>{const k=selected.indexOf(i);k>=0?selected.splice(k,1):selected.push(i);renderGame()};$('hand').appendChild(c)});$('handCount').textContent=`${mine.handCount}/15 cards`;$('selectedCount').textContent=`${selected.length} selected`;$('targetName').textContent=state.players.find(p=>p.id===targetId)?.name||'None';renderPreview();const mineTurn=isMyTurn();['playBtn','drawBtn','tradeBtn','passBtn'].forEach(id=>$(id).disabled=!mineTurn);$('drawBtn').disabled=!mineTurn||mine.handCount>=15;const pendingKey=state.pending?`${state.pending.kind}:${state.pending.playerId}:${state.pending.label||''}`:null;$('resolveBtn').classList.toggle('hidden',!(state.pending?.playerId===meId&&decisionDismissedKey===pendingKey));$('arena').innerHTML=state.tieBreaker?'<div><strong>⚔ TIE BREAKER ROUND</strong><div class="sub">Tied Players returned at 20 HP.</div></div>':'<div><strong>Main Clash</strong><div class="sub">Only the primary target Counters. Area side Players resolve defenses independently and cannot Counter.</div></div>';$('matchInfo').innerHTML=`Room <b>${state.code}</b><br>Round <b>${state.round}</b><br>Dice <b>${state.settings.diceMode}</b><br>Main Deck <b>${state.deckCount}</b> • Recycle <b>${state.recycleCount}</b><br>Turn <b>${current?.name||'Finished'}</b>`;$('log').innerHTML='';[...state.log].reverse().forEach(x=>{const d=document.createElement('div');d.textContent=x.text;$('log').appendChild(d)});renderDecision()}
+function renderPreview(){const info=classifySelected(),box=$('preview');box.className='preview';if(info.empty){box.innerHTML='<div class="sub">Select cards to preview the Action. Raw Essence + Form + Forces can be selected together.</div>';$('playBtn').textContent='Play / Attack';return}if(info.bad){box.innerHTML=`<div class="big">Invalid Selection</div><div class="sub">${info.bad}</div>`;$('playBtn').textContent='Invalid Selection';return}const cls=stabilityClass(info);if(cls)box.classList.add(cls);let nums=[];if(info.value!=null)nums.push(`${info.barrier?'HP':'D'}${info.value}`);if(info.oc!=null)nums.push(`OC ${info.oc}`);if(cls)nums.push(cls.toUpperCase());let extra='';if(cls==='unstable')extra=' • d4 required';if(cls==='rupture')extra=` • mandatory d4 • Strain +${Math.max(1,info.oc-me().effectiveOutput)}${info.oc-me().effectiveOutput>=3?' • CRITICAL OVERREACH D300':''}`;box.innerHTML=`<div class="big">${info.kind}: ${info.label}</div><div>${nums.join(' • ')}${extra}</div>${info.needsTarget===false?'<div class="sub">Self-only. No target needed.</div>':isAreaSelected()?'<div class="sub">Area attack: primary target + adjacent seats. Only primary may Counter.</div>':''}`;$('playBtn').textContent=info.kind==='Barrier'||info.kind==='Raw Barrier'?'Deploy Barrier':info.kind==='Monster'?'Summon Monster':info.kind==='Support'?'Use Support':info.kind==='Echo Shell'?'Create Echo Shell':'Cast Configuration'}
+function renderDecision(){const p=state.pending,modal=$('decision'),ctl=$('decisionControls');if(!p||p.playerId!==meId){modal.classList.add('hidden');return}const pkey=`${p.kind}:${p.playerId}:${p.label||''}`;if(decisionDismissedKey===pkey){modal.classList.add('hidden');return}modal.classList.remove('hidden');ctl.innerHTML='';$('decisionTitle').textContent=p.kind==='roll'?'🎲 Stability Roll':p.kind==='counter'?'⚔ Counter Window':p.kind==='state_choice'?'✨ Normal State Reward':'⚠ 3 Consecutive Losses';$('decisionText').textContent=p.label||p.kind;if(p.kind==='roll'){if(p.diceMode==='virtual'){const b=document.createElement('button');b.textContent='Roll Virtual d4';b.onclick=()=>socket.emit('roll',{code:room});ctl.appendChild(b)}else{const wrap=document.createElement('div');wrap.className='dice';[1,2,3,4].forEach(n=>{const b=document.createElement('button');b.textContent=n;b.className='secondary';b.onclick=()=>socket.emit('roll',{code:room,roll:n});wrap.appendChild(b)});ctl.appendChild(wrap)}}if(p.kind==='counter'){const note=document.createElement('div');note.className='sub';note.innerHTML='Select Raw or Configured attack cards from your hand behind this window, then close this overlay by choosing <b>Counter with Selected</b>. Side Players cannot Counter.';ctl.appendChild(note);const b=document.createElement('button');b.textContent='Counter with Selected';b.onclick=()=>socket.emit('counter',{code:room,indices:[...selected]});ctl.appendChild(b);const d=document.createElement('button');d.className='secondary';d.textContent='Decline Counter';d.onclick=()=>socket.emit('counter',{code:room,decline:true});ctl.appendChild(d);const h=document.createElement('button');h.className='ghost';h.textContent='Hide Window to Select Cards';h.onclick=()=>{decisionDismissedKey=pkey;modal.classList.add('hidden');$('resolveBtn').classList.remove('hidden')};ctl.appendChild(h)}if(p.kind==='state_choice'){[['v','Vitality +50'],['o','Output +1'],['s','Stability +1']].forEach(([pick,label])=>{const b=document.createElement('button');b.textContent=label;b.onclick=()=>socket.emit('state_choice',{code:room,pick});ctl.appendChild(b)})}if(p.kind==='loss_choice'){const note=document.createElement('div');note.className='sub';note.textContent='Select exactly 2 cards in your hand if you want to return cards.';ctl.appendChild(note);const a=document.createElement('button');a.textContent='Return 2 Selected Cards';a.onclick=()=>socket.emit('loss_choice',{code:room,choice:'cards',indices:[...selected]});ctl.appendChild(a);const b=document.createElement('button');b.className='secondary';b.textContent='Sacrifice Core Vitality';b.onclick=()=>socket.emit('loss_choice',{code:room,choice:'vitality'});ctl.appendChild(b);const h=document.createElement('button');h.className='ghost';h.textContent='Hide Window to Select Cards';h.onclick=()=>{decisionDismissedKey=pkey;modal.classList.add('hidden');$('resolveBtn').classList.remove('hidden')};ctl.appendChild(h)}}
+const qs=new URLSearchParams(location.search),requestedRoom=qs.get('room'),saved=JSON.parse(localStorage.getItem('echo_clash_session')||'null');if(requestedRoom){$('tabJoin').click();$('joinCode').value=requestedRoom.toUpperCase();if(socket&&saved&&saved.room===requestedRoom.toUpperCase())joinRoom(requestedRoom,'',saved.token)}else if(socket&&saved?.room)joinRoom(saved.room,'',saved.token);
 </script>
 </body>
 </html>
