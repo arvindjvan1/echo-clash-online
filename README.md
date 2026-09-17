@@ -1,4 +1,4 @@
-# Echo Clash Online V0.5 — Game Experience Alpha
+# Echo Clash Online V0.5.1 — Game Experience + Loss/AI Pace Patch
 
 V0.5 keeps the V0.4.2 authoritative multiplayer combat engine and adds the first complete player-facing game shell.
 
@@ -71,3 +71,7 @@ npm test
 ```
 
 The audit verifies the 54-card catalogue, 108-card deck size, Raw/Blade/Barrier calculations, area seating, Ricochet values, HP/deck scaling and Echo Shell definition. The V0.5 build also performs static syntax checks before packaging.
+
+
+## V0.5.1 patch
+See `V0.5.1_PATCH.md` for the Loss streak, Core State sacrifice, and AI pacing fixes.

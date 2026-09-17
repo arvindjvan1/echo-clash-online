@@ -11,9 +11,12 @@ const app = express();
 const httpServer = http.createServer(app);
 const io = new Server(httpServer, { cors: { origin: true, credentials: true } });
 const PORT = process.env.PORT || 3000;
+const AI_TURN_DELAY_MS = 4000;
+const AI_COUNTER_DELAY_MS = 1800;
+const AI_ROLL_DELAY_MS = 900;
 
 app.use(express.static(path.join(__dirname, 'public')));
-app.get('/health', (_req, res) => res.json({ ok: true, version: '0.5.0-alpha' }));
+app.get('/health', (_req, res) => res.json({ ok: true, version: '0.5.1-alpha' }));
 
 const rooms = new Map();
 const disconnectTimers = new Map();
@@ -58,7 +61,7 @@ function makePlayer(name,isAI=false){
     tempOutputExpireAt:null, tempStabilityExpireAt:null, stabilityPenaltyRounds:0,
     stabilize:false, shell:null, scheduledActionsCompleted:0,
 
-    strikes:0, lossStreak:0,
+    strikes:0, lossStreak:0, lastLossTurnSerial:null,
     ruptureStrain:0, ruptureChain:0,
     gainedStrainThisRound:false, rupturedThisRound:false, safeRounds:0,
 
@@ -88,7 +91,7 @@ function makeRoom(hostName,totalSeats,aiSeats,diceMode,disconnectMode){
     },
     players:[host],
     deck:[], recycle:[],
-    round:1, turnIndex:0, phase:'lobby', pending:null,
+    round:1, turnIndex:0, turnSerial:0, phase:'lobby', pending:null,
     log:[], tieBreaker:false, createdAt:Date.now(),
   };
 
@@ -177,7 +180,7 @@ function resetPlayerForMatch(p,hp){
   Object.assign(p,{
     alive:true,hand:[],maxHp:hp,hp,
     output:5,stability:3,tempOutput:0,tempStability:0,tempStabilityPenalty:0,tempOutputExpireAt:null,tempStabilityExpireAt:null,stabilityPenaltyRounds:0,stabilize:false,shell:null,scheduledActionsCompleted:0,
-    strikes:0,lossStreak:0,ruptureStrain:0,ruptureChain:0,
+    strikes:0,lossStreak:0,lastLossTurnSerial:null,ruptureStrain:0,ruptureChain:0,
     gainedStrainThisRound:false,rupturedThisRound:false,safeRounds:0,
     monster:null,barrier:null,lingering:[],skipTurns:0,
   });
@@ -199,6 +202,7 @@ function startGame(room){
   room.phase='action';
   room.round=1;
   room.turnIndex=0;
+  room.turnSerial=0;
   room.pending=null;
   room.tieBreaker=false;
   log(room,`Round 1 begins. ${room.players.map(p=>p.name).join(' → ')}`);
@@ -298,6 +302,7 @@ function beginTurn(room){
   const p=room.players[room.turnIndex];
 
   if(!p?.alive){ advanceTurn(room); return; }
+  room.turnSerial=(room.turnSerial||0)+1;
 
   // V0.5: every scheduled turn begins with one automatic draw, up to the 15-card hand cap.
   const turnDrawn=drawCards(room,p,1);
@@ -347,7 +352,7 @@ function beginTurn(room){
 
   room.phase='action';
 
-  if(p.isAI) setTimeout(()=>aiTurn(room,p),250);
+  if(p.isAI) setTimeout(()=>aiTurn(room,p),AI_TURN_DELAY_MS);
   else if(!p.connected && room.settings.disconnectMode==='autopass'){
     log(room,`${p.name} is disconnected and auto-passes.`);
     endScheduledAction(room,p);
@@ -422,9 +427,11 @@ function applyRupture(room,p,oc){
 
 function requestRoll(room,p,label,done){
   if(p.isAI){
-    const roll=1+Math.floor(Math.random()*4);
-    log(room,`${p.name} virtual d4 → ${roll}.`);
-    done(roll);
+    setTimeout(()=>{
+      const roll=1+Math.floor(Math.random()*4);
+      log(room,`${p.name} virtual d4 → ${roll}.`);
+      done(roll);
+    },AI_ROLL_DELAY_MS);
     return;
   }
 
@@ -492,8 +499,10 @@ function requestCounter(room,attacker,defender,attackResult,after){
 
   if(defender.isAI){
     const idx=aiAttackIndices(defender);
-    if(!idx){ after(null); return; }
-    performCounter(room,defender,attacker,idx,after);
+    setTimeout(()=>{
+      if(!idx){ after(null); return; }
+      performCounter(room,defender,attacker,idx,after);
+    },AI_COUNTER_DELAY_MS);
     return;
   }
 
@@ -733,23 +742,65 @@ function awardStrike(room,p,done){
   emitRoom(room);
 }
 
+function availableCoreSacrifices(p){
+  const out=[];
+  if(p.maxHp>20) out.push('vitality');
+  if(p.output>0) out.push('output');
+  if(p.stability>0) out.push('stability');
+  return out;
+}
+
+function sacrificeCoreState(room,p,type){
+  if(type==='vitality'&&p.maxHp>20){
+    p.maxHp=Math.max(20,p.maxHp-100);p.hp=Math.min(p.hp,p.maxHp);
+    log(room,`${p.name} sacrifices Core Vitality: Max HP −100.`);return true;
+  }
+  if(type==='output'&&p.output>0){
+    p.output=Math.max(0,p.output-1);
+    log(room,`${p.name} sacrifices Core Output: Output −1.`);return true;
+  }
+  if(type==='stability'&&p.stability>0){
+    p.stability=Math.max(0,p.stability-1);
+    log(room,`${p.name} sacrifices Core Stability: Stability −1.`);return true;
+  }
+  return false;
+}
+
 function applyLoss(room,p,done){
+  // A Player can gain at most one Loss during a single scheduled turn.
+  // This prevents a Configuration + Monster follow-up from counting as two Losses.
+  if(p.lastLossTurnSerial===room.turnSerial){ done(); return; }
+  p.lastLossTurnSerial=room.turnSerial;
   p.lossStreak++;
+  log(room,`${p.name} records Loss ${p.lossStreak}/3.`);
   if(p.lossStreak<3){ done(); return; }
+
+  // The third consecutive Loss triggers one penalty, then the streak immediately resets.
+  // A Loss on the next scheduled turn begins a fresh streak at 1/3.
   p.lossStreak=0;
+  log(room,`${p.name} reaches 3 consecutive Losses. The Loss streak resets to 0 after this penalty.`);
+
   if(p.isAI){
-    if(p.hand.length>=2){recycle(room,p.hand.splice(-2));log(room,`${p.name} returns 2 cards after 3 consecutive Losses.`);}
-    else{p.maxHp=Math.max(20,p.maxHp-100);p.hp=Math.min(p.hp,p.maxHp);log(room,`${p.name} sacrifices Core Vitality.`);}
+    if(p.hand.length>=2){
+      recycle(room,p.hand.splice(-2));
+      log(room,`${p.name} returns 2 cards after 3 consecutive Losses.`);
+    }else{
+      const choices=availableCoreSacrifices(p);
+      const pick=choices[Math.floor(Math.random()*choices.length)];
+      if(pick) sacrificeCoreState(room,p,pick);
+    }
     done();return;
   }
+
   room.phase='loss_choice';
-  room.pending={kind:'loss_choice',playerId:p.id,label:'3 consecutive Losses',resolve:(choice)=>{
+  room.pending={kind:'loss_choice',playerId:p.id,label:'3 consecutive Losses • streak resets after this penalty',resolve:(choice)=>{
     if(choice?.type==='cards'){
       const idx=validateIndices(p,choice.indices);
       if(!idx||idx.length!==2) return false;
       consumeIndices(room,p,idx);
-    }else{
-      p.maxHp=Math.max(20,p.maxHp-100);p.hp=Math.min(p.hp,p.maxHp);
+      log(room,`${p.name} returns 2 chosen cards after 3 consecutive Losses.`);
+    }else if(!sacrificeCoreState(room,p,choice?.type)){
+      return false;
     }
     done();return true;
   }};
@@ -1207,14 +1258,14 @@ io.on('connection',(socket)=>{
 
   socket.on('loss_choice',(data)=>{
     const room=rooms.get(String(data?.code||'').toUpperCase());
-    if(!room||room.pending?.kind!=='loss_choice'||!['cards','vitality'].includes(data?.choice)) return;
+    if(!room||room.pending?.kind!=='loss_choice'||!['cards','vitality','output','stability'].includes(data?.choice)) return;
     const p=room.players.find(x=>x.socketId===socket.id);
     if(!p||p.id!==room.pending.playerId) return;
     const pending=room.pending;
-    const payload=data.choice==='cards'?{type:'cards',indices:data.indices}:{type:'vitality'};
+    const payload=data.choice==='cards'?{type:'cards',indices:data.indices}:{type:data.choice};
     clearPending(room);
     const ok=pending.resolve(payload);
-    if(ok===false){room.pending=pending;room.phase='loss_choice';gameError(socket,'Select exactly 2 cards to return.');emitRoom(room);return;}
+    if(ok===false){room.pending=pending;room.phase='loss_choice';gameError(socket,'Choose an available Core State, or select exactly 2 cards to return.');emitRoom(room);return;}
   });
 
   socket.on('replace_ai',(data)=>{
